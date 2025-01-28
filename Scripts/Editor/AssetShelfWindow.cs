@@ -36,6 +36,8 @@ namespace AssetShelf
 
         private string _selectedPath = "";
 
+        private List<AssetShelfContent> _filteredContents = new List<AssetShelfContent>();
+
         private Vector2 _scrollPosition;
 
         private List<Object> _waitingPreviews = new List<Object>();
@@ -155,6 +157,8 @@ namespace AssetShelf
         private string[] _groupTitleBufer = new string[0];
         private void DrawSidebarLayout()
         {
+            var oldSelectedGroupIndex = _selectedGroupIndex;
+            var oldSelectedPath = _selectedPath;
             for (int i = 0; i < _contentGroupCount; i++)
             {
                 var contentGroupName = _contentGroupNames[i];
@@ -187,11 +191,45 @@ namespace AssetShelf
                 }
             }
 
+            if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath)
+            {
+                _scrollPosition = Vector2.zero;
+                LoadContentGroupIfNull(_selectedGroupIndex);
+                _filteredContents.Clear();
+                if (!string.IsNullOrEmpty(_selectedPath))
+                {
+                    var selectedGroup = _contentGroups[_selectedGroupIndex];
+                    _filteredContents.AddRange(selectedGroup.Contents.Where(c => HasDirectory(c.Path, _selectedPath)));
+                }
+                else
+                {
+                    _filteredContents.AddRange(_contentGroups[_selectedGroupIndex].Contents);
+                }
+            }
+
             EditorGUILayout.Space();
 
             GUILayout.Label($"Load preview total: {AssetShelfLog.LoadPreviewTotalCount}");
             GUILayout.Label($"Last draw preview: {AssetShelfLog.LastDrawPreviewCount}");
             GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
+        }
+
+        private static bool HasDirectory(string path, string directoryName)
+        {
+            var pathParts = Path.GetDirectoryName(path).Split(Path.DirectorySeparatorChar);
+            var dirParts = directoryName.Split(Path.DirectorySeparatorChar);
+            for (int i = 0; i < dirParts.Length; i++)
+            {
+                if (i >= pathParts.Length)
+                {
+                    return false;
+                }
+                if (pathParts[i] != dirParts[i])
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private void DrawInnerDirectories(AssetShelfContentDirectory directory, List<(int group, string path)> foldoutPaths, int group)
@@ -240,13 +278,7 @@ namespace AssetShelf
 
         private void DrawAssetView(Rect rect)
         {
-            if (_selectedGroupIndex < 0 || _selectedGroupIndex >= _contentGroupCount)
-            {
-                return;
-            }
-
-            LoadContentGroupIfNull(_selectedGroupIndex);
-            var contents = _contentGroups[_selectedGroupIndex].Contents;
+            var contents = _filteredContents;
             var itemSize = 64;
             var spacing = new Vector2(5, 5);
             var scrollbarWidth = 15;
