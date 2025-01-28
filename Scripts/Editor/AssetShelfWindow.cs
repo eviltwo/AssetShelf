@@ -14,16 +14,36 @@ namespace AssetShelf
             window.Show();
         }
 
-        private Object _targetFolder;
-        private List<string> _foundAssetPaths = new List<string>();
-        private List<Object> _foundAssets = new List<Object>();
-        private List<Texture2D> _foundAssetMiniThumbnails = new List<Texture2D>();
-        private List<Texture2D> _foundAssetThumbnails = new List<Texture2D>();
+        private AssetShelfContainer _container;
+
+        private List<AssetShelfContentGroup> _contentGroups = new List<AssetShelfContentGroup>();
+
+        private bool _updateContentsRequired;
+
+        private int _selectedGroupIndex = -1;
 
         private Vector2 _scrollPosition;
 
+        // Debug
+        private static int _debug_loadPreviewCount;
+
+        private void OnEnable()
+        {
+            _updateContentsRequired = true;
+        }
+
         public void OnGUI()
         {
+            if (_updateContentsRequired)
+            {
+                _updateContentsRequired = false;
+                _contentGroups.Clear();
+                if (_container != null)
+                {
+                    _container.CollectContentGroupsWithoutPreview(_contentGroups);
+                }
+            }
+
             var headerRect = new Rect(0, 0, position.width, 40);
             GUI.Box(headerRect, GUIContent.none);
             using (new GUILayout.AreaScope(headerRect))
@@ -46,51 +66,44 @@ namespace AssetShelf
         {
             using (var changeCheck = new EditorGUI.ChangeCheckScope())
             {
-                _targetFolder = EditorGUILayout.ObjectField(_targetFolder, typeof(Object), false);
-                if (changeCheck.changed && _targetFolder != null)
+                _container = EditorGUILayout.ObjectField(_container, typeof(AssetShelfContainer), false) as AssetShelfContainer;
+                if (changeCheck.changed)
                 {
-                    var path = AssetDatabase.GetAssetPath(_targetFolder);
-                    if (!AssetDatabase.IsValidFolder(path))
-                    {
-                        _targetFolder = null;
-                    }
-                }
-            }
-
-            if (_targetFolder != null && GUILayout.Button("Update"))
-            {
-                var paths = AssetDatabase.FindAssets("", new[] { AssetDatabase.GetAssetPath(_targetFolder) });
-                _foundAssetPaths.Clear();
-                _foundAssetPaths.AddRange(paths);
-                _foundAssets.Clear();
-                _foundAssetMiniThumbnails.Clear();
-                _foundAssetThumbnails.Clear();
-                foreach (var path in _foundAssetPaths)
-                {
-                    var asset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(path));
-                    _foundAssets.Add(asset);
-                    var miniThumbnail = AssetPreview.GetMiniThumbnail(asset);
-                    _foundAssetMiniThumbnails.Add(miniThumbnail);
-                    var thumbnail = AssetPreview.GetAssetPreview(asset);
-                    _foundAssetThumbnails.Add(thumbnail);
+                    _updateContentsRequired = true;
                 }
             }
         }
 
+        private string[] _groupTitleBufer = new string[0];
         private void DrawSidebarLayout()
         {
-            for (int i = 0; i < 20; i++)
+            if (_groupTitleBufer.Length != _contentGroups.Count)
             {
-                GUILayout.Label($"Dummy Item {i}");
+                _groupTitleBufer = new string[_contentGroups.Count];
             }
+            for (int i = 0; i < _contentGroups.Count; i++)
+            {
+                _groupTitleBufer[i] = _contentGroups[i].Name;
+            }
+            _selectedGroupIndex = GUILayout.SelectionGrid(_selectedGroupIndex, _groupTitleBufer, 1);
+
+            EditorGUILayout.Space();
+
+            GUILayout.Label($"Load Preview Count: {_debug_loadPreviewCount}");
         }
 
         private void DrawAssetView(Rect rect)
         {
+            if (_selectedGroupIndex < 0 || _selectedGroupIndex >= _contentGroups.Count)
+            {
+                return;
+            }
+
+            var contents = _contentGroups[_selectedGroupIndex].Contents;
             var itemSize = 64;
             var spacing = new Vector2(5, 5);
             var scrollbarWidth = 15;
-            var viewHeight = GetGridViewHeight(itemSize, spacing, rect.width - scrollbarWidth, _foundAssets.Count);
+            var viewHeight = GetGridViewHeight(itemSize, spacing, rect.width - scrollbarWidth, contents.Count);
             var viewRect = new Rect(0, 0, rect.width - scrollbarWidth, viewHeight);
             using (var scrollView = new GUI.ScrollViewScope(rect, _scrollPosition, viewRect))
             {
@@ -100,27 +113,27 @@ namespace AssetShelf
                 var startIndex = startRow * columnCount;
                 var endRow = Mathf.CeilToInt((_scrollPosition.y + rect.height) / (itemSize + spacing.y));
                 var endIndex = endRow * columnCount;
-                ReloadThumbnailsIfNeeded(startIndex, endIndex);
-                DrawGridItems(viewRect, itemSize, spacing, startIndex, endIndex);
+                LoadPreviewsIfNeeded(contents, startIndex, endIndex);
+                DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex);
             }
 
             if (Event.current.type == EventType.MouseDrag)
             {
                 var gridViewMousePosition = Event.current.mousePosition - rect.position + _scrollPosition;
                 var selectedIndex = GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
-                if (selectedIndex >= 0 && selectedIndex < _foundAssets.Count)
+                if (selectedIndex >= 0 && selectedIndex < contents.Count)
                 {
-                    var selectedObject = _foundAssets[selectedIndex];
-                    if (selectedObject != null)
+                    var selectedAsset = contents[selectedIndex].Asset;
+                    if (selectedAsset != null)
                     {
                         // Clear drag data
                         DragAndDrop.PrepareStartDrag();
 
                         // Set up drag data
-                        DragAndDrop.objectReferences = new Object[] { selectedObject };
+                        DragAndDrop.objectReferences = new Object[] { selectedAsset };
 
                         // Start drag
-                        DragAndDrop.StartDrag($"Dragging Asset: {selectedObject.name}");
+                        DragAndDrop.StartDrag($"Dragging Asset: {selectedAsset.name}");
 
                         // Make sure no one uses the event after us
                         Event.current.Use();
@@ -129,74 +142,87 @@ namespace AssetShelf
             }
         }
 
-        private float GetGridViewHeight(float itemSize, Vector2 spacing, float width, int itemCount)
+        private static float GetGridViewHeight(float itemSize, Vector2 spacing, float width, int itemCount)
         {
             var columnCount = GetGridColumnCount(itemSize, spacing.x, width);
             var rowCount = Mathf.CeilToInt(itemCount / (float)columnCount);
             return rowCount * (itemSize + spacing.y) - spacing.y;
         }
 
-        private int GetGridColumnCount(float itemSize, float spacing, float width)
+        private static int GetGridColumnCount(float itemSize, float spacing, float width)
         {
             var columnCount = Mathf.FloorToInt((width - itemSize) / (itemSize + spacing)) + 1;
             columnCount = Mathf.Max(1, columnCount);
             return columnCount;
         }
 
-        private void ReloadThumbnailsIfNeeded(int start, int end)
+        private static void LoadPreviewsIfNeeded(IReadOnlyList<AssetShelfContent> contents, int start, int end)
         {
             for (int i = start; i < end; i++)
             {
-                if (i >= _foundAssets.Count)
+                if (i >= contents.Count)
                 {
                     break;
                 }
 
-                if (_foundAssets[i] == null)
+                var content = contents[i];
+                if (content == null || content.Asset == null)
                 {
                     continue;
                 }
-
-                if (_foundAssetThumbnails[i] == null)
+                if (content.MiniPreview == null)
                 {
-                    var thumbnail = AssetPreview.GetAssetPreview(_foundAssets[i]);
-                    _foundAssetThumbnails[i] = thumbnail;
+                    content.MiniPreview = AssetPreview.GetMiniThumbnail(content.Asset);
+                }
+                if (content.Preview == null && !content.SkipPreview)
+                {
+                    content.Preview = AssetPreview.GetAssetPreview(content.Asset);
+                    _debug_loadPreviewCount++;
+                    if (content.Preview == null && !AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+                    {
+                        content.SkipPreview = true;
+                    }
                 }
             }
         }
 
-        private void DrawGridItems(Rect rect, float itemSize, Vector2 spacing, int start, int end)
+        private static void DrawGridItems(Rect rect, float itemSize, Vector2 spacing, IReadOnlyList<AssetShelfContent> contents, int start, int end)
         {
             var columnCount = GetGridColumnCount(itemSize, spacing.x, rect.width);
             for (int i = start; i < end; i++)
             {
-                if (i >= _foundAssets.Count)
+                if (i >= contents.Count)
                 {
                     break;
                 }
 
-                if (_foundAssets[i] == null)
+                var content = contents[i];
+                if (content == null)
                 {
                     continue;
                 }
 
-                var thumbnail = _foundAssetThumbnails[i];
-                if (thumbnail == null)
+                var preview = content.Preview;
+                if (preview == null)
                 {
-                    thumbnail = _foundAssetMiniThumbnails[i];
+                    preview = content.MiniPreview;
+                }
+                if (preview == null)
+                {
+                    preview = EditorGUIUtility.whiteTexture;
                 }
 
-                var thmbnailRect = new Rect(
+                var imageRect = new Rect(
                     rect.x + (i % columnCount) * (itemSize + spacing.x),
                     rect.y + (i / columnCount) * (itemSize + spacing.y),
                     itemSize,
                     itemSize
                 );
-                GUI.DrawTexture(thmbnailRect, thumbnail);
+                GUI.DrawTexture(imageRect, preview);
             }
         }
 
-        private int GetIndexInGridView(float itemSize, Vector2 spacing, Rect rect, Vector2 position)
+        private static int GetIndexInGridView(float itemSize, Vector2 spacing, Rect rect, Vector2 position)
         {
             var columnCount = GetGridColumnCount(itemSize, spacing.x, rect.width);
             var column = Mathf.FloorToInt((position.x - rect.x) / (itemSize + spacing.x));
