@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -110,7 +109,7 @@ namespace AssetShelf
                 DrawHeaderLayout();
             }
 
-            var sidebarRect = new Rect(0, headerRect.height, 400, position.height - headerRect.height);
+            var sidebarRect = new Rect(0, headerRect.height, 200, position.height - headerRect.height);
             GUI.Box(sidebarRect, GUIContent.none);
             using (new GUILayout.AreaScope(sidebarRect))
             {
@@ -154,7 +153,6 @@ namespace AssetShelf
             }
         }
 
-        private string[] _groupTitleBufer = new string[0];
         private void DrawSidebarLayout()
         {
             var oldSelectedGroupIndex = _selectedGroupIndex;
@@ -199,7 +197,7 @@ namespace AssetShelf
                 if (!string.IsNullOrEmpty(_selectedPath))
                 {
                     var selectedGroup = _contentGroups[_selectedGroupIndex];
-                    _filteredContents.AddRange(selectedGroup.Contents.Where(c => HasDirectory(c.Path, _selectedPath)));
+                    _filteredContents.AddRange(selectedGroup.Contents.Where(c => AssetShelfUtility.HasDirectory(c.Path, _selectedPath)));
                 }
                 else
                 {
@@ -209,27 +207,10 @@ namespace AssetShelf
 
             EditorGUILayout.Space();
 
+            // Debug view
             GUILayout.Label($"Load preview total: {AssetShelfLog.LoadPreviewTotalCount}");
             GUILayout.Label($"Last draw preview: {AssetShelfLog.LastDrawPreviewCount}");
             GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
-        }
-
-        private static bool HasDirectory(string path, string directoryName)
-        {
-            var pathParts = Path.GetDirectoryName(path).Split(Path.DirectorySeparatorChar);
-            var dirParts = directoryName.Split(Path.DirectorySeparatorChar);
-            for (int i = 0; i < dirParts.Length; i++)
-            {
-                if (i >= pathParts.Length)
-                {
-                    return false;
-                }
-                if (pathParts[i] != dirParts[i])
-                {
-                    return false;
-                }
-            }
-            return true;
         }
 
         private void DrawInnerDirectories(AssetShelfContentDirectory directory, List<(int group, string path)> foldoutPaths, int group)
