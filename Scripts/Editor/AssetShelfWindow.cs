@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -25,7 +26,11 @@ namespace AssetShelf
 
         private AssetShelfContentGroup[] _contentGroups = new AssetShelfContentGroup[0];
 
+        private AssetShelfContentDirectoryAnalyzer[] _directoryAnalyzers = new AssetShelfContentDirectoryAnalyzer[0];
+
         private bool _updateContentsRequired;
+
+        private List<(int group, string path)> _foldoutPaths = new List<(int group, string path)>();
 
         private int _selectedGroupIndex = 0;
 
@@ -78,11 +83,13 @@ namespace AssetShelf
                     _contentGroupCount = 0;
                     _contentGroupNames = new string[0];
                     _contentGroups = new AssetShelfContentGroup[0];
+                    _directoryAnalyzers = new AssetShelfContentDirectoryAnalyzer[0];
                 }
                 else
                 {
                     _contentGroupCount = _container.GetContentGroupCount();
                     _contentGroupNames = new string[_contentGroupCount];
+                    _directoryAnalyzers = new AssetShelfContentDirectoryAnalyzer[_contentGroupCount];
                     for (int i = 0; i < _contentGroupCount; i++)
                     {
                         _contentGroupNames[i] = _container.GetContentGroupName(i);
@@ -99,7 +106,7 @@ namespace AssetShelf
                 DrawHeaderLayout();
             }
 
-            var sidebarRect = new Rect(0, headerRect.height, 200, position.height - headerRect.height);
+            var sidebarRect = new Rect(0, headerRect.height, 400, position.height - headerRect.height);
             GUI.Box(sidebarRect, GUIContent.none);
             using (new GUILayout.AreaScope(sidebarRect))
             {
@@ -120,26 +127,59 @@ namespace AssetShelf
 
         private void DrawHeaderLayout()
         {
-            using (var changeCheck = new EditorGUI.ChangeCheckScope())
+            using (new GUILayout.HorizontalScope())
             {
-                _container = EditorGUILayout.ObjectField(_container, typeof(AssetShelfContainer), false) as AssetShelfContainer;
-                if (changeCheck.changed)
+                if (_container != null)
                 {
-                    _updateContentsRequired = true;
+                    if (GUILayout.Button(EditorGUIUtility.IconContent("d_Refresh"), GUILayout.Width(40)))
+                    {
+                        _updateContentsRequired = true;
+                        Repaint();
+                    }
+                }
+
+                using (var changeCheck = new EditorGUI.ChangeCheckScope())
+                {
+                    _container = EditorGUILayout.ObjectField(_container, typeof(AssetShelfContainer), false) as AssetShelfContainer;
+                    if (changeCheck.changed)
+                    {
+                        _updateContentsRequired = true;
+                        Repaint();
+                    }
                 }
             }
         }
 
-        private static bool _dummyFoldout;
         private string[] _groupTitleBufer = new string[0];
         private void DrawSidebarLayout()
         {
             for (int i = 0; i < _contentGroupCount; i++)
             {
                 var contentGroupName = _contentGroupNames[i];
-                if (AssetShelfGUILayout.FoldoutSelectButton(i == _selectedGroupIndex, contentGroupName, ref _dummyFoldout))
+                var groupFoldoutIndex = _foldoutPaths.FindIndex(v => v.group == i && string.IsNullOrEmpty(v.path));
+                var prevFoldout = groupFoldoutIndex >= 0;
+                var currentFoldout = prevFoldout;
+                if (AssetShelfGUILayout.FoldoutSelectButton(i == _selectedGroupIndex, contentGroupName, ref currentFoldout))
                 {
                     _selectedGroupIndex = i;
+                }
+                if (!prevFoldout && currentFoldout)
+                {
+                    _foldoutPaths.Add((i, ""));
+                }
+                else if (prevFoldout && !currentFoldout)
+                {
+                    _foldoutPaths.RemoveAt(groupFoldoutIndex);
+                }
+                if (currentFoldout)
+                {
+                    if (_directoryAnalyzers[i] == null)
+                    {
+                        LoadContentGroupIfNull(i);
+                        _directoryAnalyzers[i] = new AssetShelfContentDirectoryAnalyzer(_contentGroups[i]);
+                    }
+
+                    DrawInnerDirectories(_directoryAnalyzers[i].Root, _foldoutPaths, i);
                 }
             }
 
@@ -148,6 +188,41 @@ namespace AssetShelf
             GUILayout.Label($"Load preview total: {AssetShelfLog.LoadPreviewTotalCount}");
             GUILayout.Label($"Last draw preview: {AssetShelfLog.LastDrawPreviewCount}");
             GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
+        }
+
+        private static void DrawInnerDirectories(AssetShelfContentDirectory directory, List<(int group, string path)> foldoutPaths, int group)
+        {
+            var childDirectories = directory.Childs;
+            using (new EditorGUI.IndentLevelScope())
+            {
+                for (int i = 0; i < childDirectories.Count; i++)
+                {
+                    var child = childDirectories[i];
+                    if (child.Childs.Count > 0)
+                    {
+                        var foldoutIndex = foldoutPaths.FindIndex(v => v.group == group && v.path == child.Path);
+                        var prevFoldout = foldoutIndex >= 0;
+                        var currentFoldout = prevFoldout;
+                        AssetShelfGUILayout.FoldoutSelectButton(false, child.ShortName, ref currentFoldout);
+                        if (!prevFoldout && currentFoldout)
+                        {
+                            foldoutPaths.Add((group, child.Path));
+                        }
+                        else if (prevFoldout && !currentFoldout)
+                        {
+                            foldoutPaths.RemoveAt(foldoutIndex);
+                        }
+                        if (currentFoldout)
+                        {
+                            DrawInnerDirectories(child, foldoutPaths, group);
+                        }
+                    }
+                    else
+                    {
+                        AssetShelfGUILayout.SelectButton(false, child.ShortName);
+                    }
+                }
+            }
         }
 
         private void DrawAssetView(Rect rect)
@@ -213,5 +288,73 @@ namespace AssetShelf
                 }
             }
         }
+    }
+
+    public class AssetShelfContentDirectoryAnalyzer
+    {
+        private readonly AssetShelfContentDirectory _root;
+
+        public AssetShelfContentDirectory Root => _root;
+
+        public AssetShelfContentDirectoryAnalyzer(AssetShelfContentGroup contentGroup)
+        {
+            _root = new AssetShelfContentDirectory();
+            var paths = contentGroup.Contents.Select(c => Path.GetDirectoryName(c.Path)).Where(v => !string.IsNullOrEmpty(v)).Distinct().OrderBy(v => v).ToList();
+            foreach (var path in paths)
+            {
+                var parts = path.Split(Path.DirectorySeparatorChar);
+                AddDirectory(_root, parts, 0);
+            }
+            for (int i = 0; i < 10; i++)
+            {
+                if (_root.Childs.Count == 1)
+                {
+                    _root = _root.Childs[0];
+                }
+                else
+                {
+                    break;
+                }
+            }
+            _root.Path = "";
+            _root.ShortName = "";
+        }
+
+        private void AddDirectory(AssetShelfContentDirectory dir, string[] paths, int index)
+        {
+            var found = false;
+            foreach (var child in dir.Childs)
+            {
+                if (child.ShortName == paths[index])
+                {
+                    found = true;
+                    if (index + 1 < paths.Length)
+                    {
+                        AddDirectory(child, paths, index + 1);
+                    }
+                    break;
+                }
+            }
+            if (!found)
+            {
+                var newDir = new AssetShelfContentDirectory
+                {
+                    Path = string.Join(Path.DirectorySeparatorChar.ToString(), paths.Take(index + 1)),
+                    ShortName = paths[index]
+                };
+                dir.Childs.Add(newDir);
+                if (index + 1 < paths.Length)
+                {
+                    AddDirectory(newDir, paths, index + 1);
+                }
+            }
+        }
+    }
+
+    public class AssetShelfContentDirectory
+    {
+        public string Path;
+        public string ShortName;
+        public List<AssetShelfContentDirectory> Childs = new List<AssetShelfContentDirectory>();
     }
 }
