@@ -34,6 +34,8 @@ namespace AssetShelf
 
         private int _selectedGroupIndex = 0;
 
+        private string _selectedPath = "";
+
         private Vector2 _scrollPosition;
 
         private List<Object> _waitingPreviews = new List<Object>();
@@ -156,12 +158,14 @@ namespace AssetShelf
             for (int i = 0; i < _contentGroupCount; i++)
             {
                 var contentGroupName = _contentGroupNames[i];
+                var selected = i == _selectedGroupIndex && string.IsNullOrEmpty(_selectedPath);
                 var groupFoldoutIndex = _foldoutPaths.FindIndex(v => v.group == i && string.IsNullOrEmpty(v.path));
                 var prevFoldout = groupFoldoutIndex >= 0;
                 var currentFoldout = prevFoldout;
-                if (AssetShelfGUILayout.FoldoutSelectButton(i == _selectedGroupIndex, contentGroupName, ref currentFoldout))
+                if (AssetShelfGUILayout.FoldoutSelectButton(selected, contentGroupName, ref currentFoldout))
                 {
                     _selectedGroupIndex = i;
+                    _selectedPath = "";
                 }
                 if (!prevFoldout && currentFoldout)
                 {
@@ -190,7 +194,7 @@ namespace AssetShelf
             GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
         }
 
-        private static void DrawInnerDirectories(AssetShelfContentDirectory directory, List<(int group, string path)> foldoutPaths, int group)
+        private void DrawInnerDirectories(AssetShelfContentDirectory directory, List<(int group, string path)> foldoutPaths, int group)
         {
             var childDirectories = directory.Childs;
             using (new EditorGUI.IndentLevelScope())
@@ -198,12 +202,17 @@ namespace AssetShelf
                 for (int i = 0; i < childDirectories.Count; i++)
                 {
                     var child = childDirectories[i];
+                    var selected = group == _selectedGroupIndex && child.Path == _selectedPath;
                     if (child.Childs.Count > 0)
                     {
                         var foldoutIndex = foldoutPaths.FindIndex(v => v.group == group && v.path == child.Path);
                         var prevFoldout = foldoutIndex >= 0;
                         var currentFoldout = prevFoldout;
-                        AssetShelfGUILayout.FoldoutSelectButton(false, child.ShortName, ref currentFoldout);
+                        if (AssetShelfGUILayout.FoldoutSelectButton(selected, child.ShortName, ref currentFoldout))
+                        {
+                            _selectedGroupIndex = group;
+                            _selectedPath = child.Path;
+                        }
                         if (!prevFoldout && currentFoldout)
                         {
                             foldoutPaths.Add((group, child.Path));
@@ -219,7 +228,11 @@ namespace AssetShelf
                     }
                     else
                     {
-                        AssetShelfGUILayout.SelectButton(false, child.ShortName);
+                        if (AssetShelfGUILayout.SelectButton(selected, child.ShortName))
+                        {
+                            _selectedGroupIndex = group;
+                            _selectedPath = child.Path;
+                        }
                     }
                 }
             }
