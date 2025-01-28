@@ -100,6 +100,7 @@ namespace AssetShelf
                 var startIndex = startRow * columnCount;
                 var endRow = Mathf.CeilToInt((_scrollPosition.y + rect.height) / (itemSize + spacing.y));
                 var endIndex = endRow * columnCount;
+                ReloadThumbnailsIfNeeded(startIndex, endIndex);
                 DrawGridItems(viewRect, itemSize, spacing, startIndex, endIndex);
             }
 
@@ -142,6 +143,28 @@ namespace AssetShelf
             return columnCount;
         }
 
+        private void ReloadThumbnailsIfNeeded(int start, int end)
+        {
+            for (int i = start; i < end; i++)
+            {
+                if (i >= _foundAssets.Count)
+                {
+                    break;
+                }
+
+                if (_foundAssets[i] == null)
+                {
+                    continue;
+                }
+
+                if (_foundAssetThumbnails[i] == null)
+                {
+                    var thumbnail = AssetPreview.GetAssetPreview(_foundAssets[i]);
+                    _foundAssetThumbnails[i] = thumbnail;
+                }
+            }
+        }
+
         private void DrawGridItems(Rect rect, float itemSize, Vector2 spacing, int start, int end)
         {
             var columnCount = GetGridColumnCount(itemSize, spacing.x, rect.width);
@@ -151,6 +174,12 @@ namespace AssetShelf
                 {
                     break;
                 }
+
+                if (_foundAssets[i] == null)
+                {
+                    continue;
+                }
+
                 var thumbnail = _foundAssetThumbnails[i];
                 if (thumbnail == null)
                 {
