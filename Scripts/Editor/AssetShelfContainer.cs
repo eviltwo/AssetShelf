@@ -6,5 +6,12 @@ namespace AssetShelf
     public abstract class AssetShelfContainer : ScriptableObject
     {
         public abstract void CollectContentGroupsWithoutPreview(List<AssetShelfContentGroup> accumulatedResults);
+
+        public int PropertyChangeCount { get; private set; }
+
+        private void OnValidate()
+        {
+            PropertyChangeCount++;
+        }
     }
 }
