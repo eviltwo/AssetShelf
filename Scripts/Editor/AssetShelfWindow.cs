@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace AssetShelf
 {
-    public class AssetShelfWindow : EditorWindow
+    public class AssetShelfWindow : EditorWindow, IHasCustomMenu
     {
         [MenuItem("Window/Asset Shelf")]
         private static void Open()
@@ -41,9 +41,16 @@ namespace AssetShelf
 
         private List<Object> _waitingPreviews = new List<Object>();
 
+        private bool _showDebugView;
+
         private void OnEnable()
         {
             _updateContentsRequired = true;
+        }
+
+        public void AddItemsToMenu(GenericMenu menu)
+        {
+            menu.AddItem(new GUIContent("Show Debug View"), _showDebugView, () => _showDebugView = !_showDebugView);
         }
 
         private void Update()
@@ -109,11 +116,23 @@ namespace AssetShelf
                 DrawHeaderLayout();
             }
 
-            var sidebarRect = new Rect(0, headerRect.height, 200, position.height - headerRect.height);
+            var debugViewHeight = _showDebugView ? EditorGUIUtility.singleLineHeight * 3 : 0;
+
+            var sidebarRect = new Rect(0, headerRect.height, 200, position.height - headerRect.height - debugViewHeight);
             GUI.Box(sidebarRect, GUIContent.none);
             using (new GUILayout.AreaScope(sidebarRect))
             {
                 DrawSidebarLayout();
+            }
+
+            if (_showDebugView)
+            {
+                var debugViewRect = new Rect(0, position.height - debugViewHeight, sidebarRect.width, debugViewHeight);
+                GUI.Box(debugViewRect, GUIContent.none);
+                using (new GUILayout.AreaScope(debugViewRect))
+                {
+                    DrawDebugViewLayout();
+                }
             }
 
             var assetViewRect = new Rect(sidebarRect.width, headerRect.height, position.width - sidebarRect.width, position.height - headerRect.height);
@@ -204,13 +223,6 @@ namespace AssetShelf
                     _filteredContents.AddRange(_contentGroups[_selectedGroupIndex].Contents);
                 }
             }
-
-            EditorGUILayout.Space();
-
-            // Debug view
-            GUILayout.Label($"Load preview total: {AssetShelfLog.LoadPreviewTotalCount}");
-            GUILayout.Label($"Last draw preview: {AssetShelfLog.LastDrawPreviewCount}");
-            GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
         }
 
         private void DrawInnerDirectories(AssetShelfContentDirectory directory, List<(int group, string path)> foldoutPaths, int group)
@@ -255,6 +267,13 @@ namespace AssetShelf
                     }
                 }
             }
+        }
+
+        private void DrawDebugViewLayout()
+        {
+            GUILayout.Label($"Load preview total: {AssetShelfLog.LoadPreviewTotalCount}");
+            GUILayout.Label($"Last draw preview: {AssetShelfLog.LastDrawPreviewCount}");
+            GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
         }
 
         private void DrawAssetView(Rect rect)
