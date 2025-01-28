@@ -79,18 +79,18 @@ namespace AssetShelf
             }
         }
 
+        private static bool _dummyFoldout;
         private string[] _groupTitleBufer = new string[0];
         private void DrawSidebarLayout()
         {
-            if (_groupTitleBufer.Length != _contentGroups.Count)
-            {
-                _groupTitleBufer = new string[_contentGroups.Count];
-            }
             for (int i = 0; i < _contentGroups.Count; i++)
             {
-                _groupTitleBufer[i] = _contentGroups[i].Name;
+                var contentGroup = _contentGroups[i];
+                if (AssetShelfGUILayout.FoldoutSelectButton(i == _selectedGroupIndex, contentGroup.Name, ref _dummyFoldout))
+                {
+                    _selectedGroupIndex = i;
+                }
             }
-            _selectedGroupIndex = GUILayout.SelectionGrid(_selectedGroupIndex, _groupTitleBufer, 1);
 
             EditorGUILayout.Space();
 
