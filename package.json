@@ -1,0 +1,17 @@
+{
+    "name": "com.eviltwo.asset-shelf",
+    "displayName": "Asset Shelf",
+    "version": "0.5.0",
+    "unity": "2022.3",
+    "description": "Asset Shelf is an asset browser for Unity that displays the contents of specified folders in a list. You can drag and drop the displayed assets into scenes or other areas.",
+    "author": {
+        "name": "DAIKI(eviltwo)",
+        "url": "https://github.com/eviltwo"
+    },
+
+    "keywords": [
+    ],
+
+    "dependencies": {
+    }
+}
