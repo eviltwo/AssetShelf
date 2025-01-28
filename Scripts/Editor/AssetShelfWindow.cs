@@ -35,6 +35,8 @@ namespace AssetShelf
 
         private string _selectedPath = "";
 
+        private bool _filteredContentsGenerated;
+
         private List<AssetShelfContent> _filteredContents = new List<AssetShelfContent>();
 
         private Vector2 _scrollPosition;
@@ -88,6 +90,8 @@ namespace AssetShelf
             if (_updateContentsRequired)
             {
                 _updateContentsRequired = false;
+                _filteredContentsGenerated = false;
+                _filteredContents.Clear();
                 if (_container == null)
                 {
                     _contentGroupCount = 0;
@@ -174,6 +178,11 @@ namespace AssetShelf
 
         private void DrawSidebarLayout()
         {
+            if (_contentGroups == null || _contentGroups.Length == 0)
+            {
+                return;
+            }
+
             var oldSelectedGroupIndex = _selectedGroupIndex;
             var oldSelectedPath = _selectedPath;
             for (int i = 0; i < _contentGroupCount; i++)
@@ -208,8 +217,9 @@ namespace AssetShelf
                 }
             }
 
-            if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath)
+            if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath || !_filteredContentsGenerated)
             {
+                _filteredContentsGenerated = true;
                 _scrollPosition = Vector2.zero;
                 LoadContentGroupIfNull(_selectedGroupIndex);
                 _filteredContents.Clear();
