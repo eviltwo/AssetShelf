@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -30,9 +31,36 @@ namespace AssetShelf
 
         private Vector2 _scrollPosition;
 
+        private List<Object> _waitingPreviews = new List<Object>();
+
         private void OnEnable()
         {
             _updateContentsRequired = true;
+        }
+
+        private void Update()
+        {
+            var repaintRequired = false;
+            for (int i = _waitingPreviews.Count - 1; i >= 0; i--)
+            {
+                var asset = _waitingPreviews[i];
+                if (asset == null)
+                {
+                    _waitingPreviews.RemoveAt(i);
+                    continue;
+                }
+                if (!AssetPreview.IsLoadingAssetPreview(asset.GetInstanceID()))
+                {
+                    _waitingPreviews.RemoveAt(i);
+                    repaintRequired = true;
+                    continue;
+                }
+            }
+            if (repaintRequired)
+            {
+                Repaint();
+                AssetShelfLog.RepaintCallCount++;
+            }
         }
 
         public void OnGUI()
@@ -144,12 +172,19 @@ namespace AssetShelf
                 var startIndex = startRow * columnCount;
                 var endRow = Mathf.CeilToInt((_scrollPosition.y + rect.height) / (itemSize + spacing.y));
                 var endIndex = endRow * columnCount;
+                endIndex = Mathf.Min(endIndex, contents.Count);
                 AssetShelfGUI.LoadPreviewsIfNeeded(contents, startIndex, endIndex);
                 var isLoadingPreview = contents.Skip(startIndex).Take(endIndex - startIndex).Any(c => c.Preview == null && !c.SkipPreview);
-                if (isLoadingPreview)
+                for (int i = startIndex; i < endIndex; i++)
                 {
-                    Repaint();
-                    AssetShelfLog.RepaintCallCount++;
+                    var content = contents[i];
+                    if (content != null && content.Preview == null && !content.SkipPreview)
+                    {
+                        if (!_waitingPreviews.Contains(content.Asset))
+                        {
+                            _waitingPreviews.Add(content.Asset);
+                        }
+                    }
                 }
                 AssetShelfGUI.DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex);
             }
