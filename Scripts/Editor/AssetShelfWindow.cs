@@ -46,7 +46,6 @@ namespace AssetShelf
 
             if (_container != null && _lastContainerPropertyChangeCount != _container.PropertyChangeCount)
             {
-                _lastContainerPropertyChangeCount = _container.PropertyChangeCount;
                 _updateContentsRequired = true;
             }
 
