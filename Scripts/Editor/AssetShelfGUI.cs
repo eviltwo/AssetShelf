@@ -80,6 +80,10 @@ namespace AssetShelf
                 }
                 if (preview == null)
                 {
+                    preview = AssetPreview.GetMiniTypeThumbnail(content.Asset.GetType());
+                }
+                if (preview == null)
+                {
                     preview = EditorGUIUtility.whiteTexture;
                 }
 

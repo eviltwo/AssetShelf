@@ -4,5 +4,6 @@ namespace AssetShelf
     {
         public static int LoadPreviewTotalCount;
         public static int LastDrawPreviewCount;
+        public static int RepaintCallCount;
     }
 }

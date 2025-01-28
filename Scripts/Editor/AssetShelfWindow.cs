@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,7 +18,11 @@ namespace AssetShelf
 
         private int _lastContainerPropertyChangeCount;
 
-        private List<AssetShelfContentGroup> _contentGroups = new List<AssetShelfContentGroup>();
+        private int _contentGroupCount;
+
+        private string[] _contentGroupNames = new string[0];
+
+        private AssetShelfContentGroup[] _contentGroups = new AssetShelfContentGroup[0];
 
         private bool _updateContentsRequired;
 
@@ -33,20 +37,31 @@ namespace AssetShelf
 
         public void OnGUI()
         {
-            if (_updateContentsRequired)
-            {
-                _updateContentsRequired = false;
-                _contentGroups.Clear();
-                if (_container != null)
-                {
-                    _container.CollectContentGroupsWithoutPreview(_contentGroups);
-                    _lastContainerPropertyChangeCount = _container.PropertyChangeCount;
-                }
-            }
-
             if (_container != null && _lastContainerPropertyChangeCount != _container.PropertyChangeCount)
             {
                 _updateContentsRequired = true;
+            }
+
+            if (_updateContentsRequired)
+            {
+                _updateContentsRequired = false;
+                if (_container == null)
+                {
+                    _contentGroupCount = 0;
+                    _contentGroupNames = new string[0];
+                    _contentGroups = new AssetShelfContentGroup[0];
+                }
+                else
+                {
+                    _contentGroupCount = _container.GetContentGroupCount();
+                    _contentGroupNames = new string[_contentGroupCount];
+                    for (int i = 0; i < _contentGroupCount; i++)
+                    {
+                        _contentGroupNames[i] = _container.GetContentGroupName(i);
+                    }
+                    _contentGroups = new AssetShelfContentGroup[_contentGroupCount];
+                    _lastContainerPropertyChangeCount = _container.PropertyChangeCount;
+                }
             }
 
             var headerRect = new Rect(0, 0, position.width, 40);
@@ -67,6 +82,14 @@ namespace AssetShelf
             DrawAssetView(assetViewRect);
         }
 
+        private void LoadContentGroupIfNull(int index)
+        {
+            if (_contentGroups[index] == null)
+            {
+                _contentGroups[index] = _container.GetContentGroupWithoutPreview(index);
+            }
+        }
+
         private void DrawHeaderLayout()
         {
             using (var changeCheck = new EditorGUI.ChangeCheckScope())
@@ -83,10 +106,10 @@ namespace AssetShelf
         private string[] _groupTitleBufer = new string[0];
         private void DrawSidebarLayout()
         {
-            for (int i = 0; i < _contentGroups.Count; i++)
+            for (int i = 0; i < _contentGroupCount; i++)
             {
-                var contentGroup = _contentGroups[i];
-                if (AssetShelfGUILayout.FoldoutSelectButton(i == _selectedGroupIndex, contentGroup.Name, ref _dummyFoldout))
+                var contentGroupName = _contentGroupNames[i];
+                if (AssetShelfGUILayout.FoldoutSelectButton(i == _selectedGroupIndex, contentGroupName, ref _dummyFoldout))
                 {
                     _selectedGroupIndex = i;
                 }
@@ -96,15 +119,17 @@ namespace AssetShelf
 
             GUILayout.Label($"Load preview total: {AssetShelfLog.LoadPreviewTotalCount}");
             GUILayout.Label($"Last draw preview: {AssetShelfLog.LastDrawPreviewCount}");
+            GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
         }
 
         private void DrawAssetView(Rect rect)
         {
-            if (_selectedGroupIndex < 0 || _selectedGroupIndex >= _contentGroups.Count)
+            if (_selectedGroupIndex < 0 || _selectedGroupIndex >= _contentGroupCount)
             {
                 return;
             }
 
+            LoadContentGroupIfNull(_selectedGroupIndex);
             var contents = _contentGroups[_selectedGroupIndex].Contents;
             var itemSize = 64;
             var spacing = new Vector2(5, 5);
@@ -120,6 +145,12 @@ namespace AssetShelf
                 var endRow = Mathf.CeilToInt((_scrollPosition.y + rect.height) / (itemSize + spacing.y));
                 var endIndex = endRow * columnCount;
                 AssetShelfGUI.LoadPreviewsIfNeeded(contents, startIndex, endIndex);
+                var isLoadingPreview = contents.Skip(startIndex).Take(endIndex - startIndex).Any(c => c.Preview == null && !c.SkipPreview);
+                if (isLoadingPreview)
+                {
+                    Repaint();
+                    AssetShelfLog.RepaintCallCount++;
+                }
                 AssetShelfGUI.DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex);
             }
 
