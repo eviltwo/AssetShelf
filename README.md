@@ -3,6 +3,8 @@ Asset Shelf is an asset browser for Unity that displays the contents of specifie
 
 ![shelf](https://github.com/user-attachments/assets/a93c2cf7-c9d8-47ed-ba37-6c995449a364)
 
+![shelf_synty](https://github.com/user-attachments/assets/896de65a-f21c-44ae-b8ee-2186a1c70b81)
+
 ![image](https://github.com/user-attachments/assets/41079a24-7607-42ba-b2fe-745dd4c22f09)
 
 # Install with UPM
