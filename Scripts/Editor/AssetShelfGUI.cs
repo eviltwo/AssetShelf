@@ -32,7 +32,7 @@ namespace AssetShelf
                 }
 
                 var content = contents[i];
-                if (content == null)
+                if (content == null || content.Asset == null)
                 {
                     continue;
                 }

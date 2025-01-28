@@ -55,18 +55,12 @@ namespace AssetShelf
 
         private static void CollectContentsWithoutPreviewFromFolder(string folderPath, string searchFilter, List<AssetShelfContent> accumulatedResults)
         {
-            var assetPaths = AssetDatabase.FindAssets(searchFilter, new string[] { folderPath });
-            foreach (var assetPath in assetPaths)
+            var guids = AssetDatabase.FindAssets(searchFilter, new string[] { folderPath });
+            foreach (var guid in guids)
             {
-                var asset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(assetPath));
-                if (asset == null)
-                {
-                    continue;
-                }
                 var content = new AssetShelfContent
                 {
-                    Asset = asset,
-                    Path = AssetDatabase.GetAssetPath(asset)
+                    Path = AssetDatabase.GUIDToAssetPath(guid)
                 };
                 accumulatedResults.Add(content);
             }
