@@ -16,7 +16,7 @@ namespace AssetShelf
 
         private AssetShelfContainer _container;
 
-        private int _lastContainerPropertyChangeCount;
+        private int _lastContainerVersion;
 
         private int _contentGroupCount;
 
@@ -37,7 +37,7 @@ namespace AssetShelf
 
         public void OnGUI()
         {
-            if (_container != null && _lastContainerPropertyChangeCount != _container.PropertyChangeCount)
+            if (_container != null && _lastContainerVersion != _container.PropertyVersion)
             {
                 _updateContentsRequired = true;
             }
@@ -60,7 +60,7 @@ namespace AssetShelf
                         _contentGroupNames[i] = _container.GetContentGroupName(i);
                     }
                     _contentGroups = new AssetShelfContentGroup[_contentGroupCount];
-                    _lastContainerPropertyChangeCount = _container.PropertyChangeCount;
+                    _lastContainerVersion = _container.PropertyVersion;
                 }
             }
 

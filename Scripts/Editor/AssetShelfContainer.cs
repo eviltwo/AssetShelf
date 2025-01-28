@@ -10,11 +10,11 @@ namespace AssetShelf
 
         public abstract AssetShelfContentGroup GetContentGroupWithoutPreview(int index);
 
-        public int PropertyChangeCount { get; private set; }
+        public int PropertyVersion { get; private set; }
 
         private void OnValidate()
         {
-            PropertyChangeCount++;
+            PropertyVersion++;
         }
     }
 }
