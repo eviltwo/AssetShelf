@@ -143,7 +143,7 @@ namespace AssetShelf
             DrawAssetView(assetViewRect);
             if (AssetShelfLog.LastDrawPreviewCount > 128)
             {
-                AssetPreview.SetPreviewTextureCacheSize(AssetShelfLog.LastDrawPreviewCount);
+                AssetPreview.SetPreviewTextureCacheSize(AssetShelfLog.LastDrawPreviewCount * 2);
             }
         }
 
