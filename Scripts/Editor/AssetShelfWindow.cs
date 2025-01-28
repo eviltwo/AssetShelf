@@ -120,7 +120,7 @@ namespace AssetShelf
                 DrawHeaderLayout();
             }
 
-            var debugViewHeight = _showDebugView ? EditorGUIUtility.singleLineHeight * 3 : 0;
+            var debugViewHeight = _showDebugView ? EditorGUIUtility.singleLineHeight * 4 : 0;
 
             var sidebarRect = new Rect(0, headerRect.height, 200, position.height - headerRect.height - debugViewHeight);
             GUI.Box(sidebarRect, GUIContent.none);
@@ -281,6 +281,10 @@ namespace AssetShelf
 
         private void DrawDebugViewLayout()
         {
+            if (GUILayout.Button("Clear"))
+            {
+                AssetShelfLog.Clear();
+            }
             GUILayout.Label($"Load preview total: {AssetShelfLog.LoadPreviewTotalCount}");
             GUILayout.Label($"Last draw preview: {AssetShelfLog.LastDrawPreviewCount}");
             GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
@@ -303,7 +307,7 @@ namespace AssetShelf
                 var endRow = Mathf.CeilToInt((_scrollPosition.y + rect.height) / (itemSize + spacing.y));
                 var endIndex = endRow * columnCount;
                 endIndex = Mathf.Min(endIndex, contents.Count);
-                AssetShelfGUI.LoadPreviewsIfNeeded(contents, startIndex, endIndex);
+                AssetShelfUtility.LoadPreviewsIfNeeded(contents, startIndex, endIndex);
                 var isLoadingPreview = contents.Skip(startIndex).Take(endIndex - startIndex).Any(c => c.Preview == null && !c.SkipPreview);
                 for (int i = startIndex; i < endIndex; i++)
                 {
