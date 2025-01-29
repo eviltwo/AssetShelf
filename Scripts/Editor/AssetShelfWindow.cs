@@ -58,6 +58,7 @@ namespace AssetShelf
         private TreeViewState _treeViewState;
 
         private AssetShelfTreeView _treeView;
+        private bool _treeViewAvailable;
 
         private void OnEnable()
         {
@@ -147,6 +148,7 @@ namespace AssetShelf
                     _contentGroupNames = new string[0];
                     _contentGroups = new AssetShelfContentGroup[0];
                     _directoryAnalyzers = new AssetShelfContentDirectoryAnalyzer[0];
+                    _treeViewAvailable = false;
                 }
                 else
                 {
@@ -161,6 +163,7 @@ namespace AssetShelf
                     _lastContainerVersion = _container.PropertyVersion;
                     _treeView.Setup(_container);
                     _treeView.Reload();
+                    _treeViewAvailable = true;
                 }
             }
 
@@ -262,6 +265,11 @@ namespace AssetShelf
 
         private void DrawTreeView(Rect rect)
         {
+            if (!_treeViewAvailable)
+            {
+                return;
+            }
+
             _treeView.OnGUI(rect);
 
             var oldSelectedGroupIndex = _selectedGroupIndex;
