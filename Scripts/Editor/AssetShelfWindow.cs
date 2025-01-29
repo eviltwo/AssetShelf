@@ -60,6 +60,8 @@ namespace AssetShelf
         private AssetShelfTreeView _treeView;
         private bool _treeViewAvailable;
 
+        private SelectionWithoutPing _selectionWithoutPing;
+
         private void OnEnable()
         {
             var containerGuid = EditorUserSettings.GetConfigValue(ContainerGuidUserSettingsKey);
@@ -101,6 +103,8 @@ namespace AssetShelf
 
             _treeView = new AssetShelfTreeView(_treeViewState);
 
+            _selectionWithoutPing = new SelectionWithoutPing();
+
             _updateContentsRequired = true;
         }
 
@@ -118,6 +122,8 @@ namespace AssetShelf
                     Debug.LogException(e);
                 }
             }
+
+            _selectionWithoutPing.Dispose();
         }
 
         public void AddItemsToMenu(GenericMenu menu)
@@ -153,6 +159,8 @@ namespace AssetShelf
                 Repaint();
                 AssetShelfLog.RepaintCallCount++;
             }
+
+            _selectionWithoutPing.Update();
         }
 
         public void OnGUI()
@@ -375,6 +383,7 @@ namespace AssetShelf
                 {
                     _dragStartAsset = contents[selectedIndex].Asset;
                     _selectedAsset = contents[selectedIndex].Asset;
+                    _selectionWithoutPing.Select(_selectedAsset);
                     Repaint();
                     AssetShelfLog.RepaintCallCount++;
                 }
