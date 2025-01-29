@@ -17,6 +17,7 @@ namespace AssetShelf
 
         private static string ContainerGuidUserSettingsKey = "AssetShelfWindow.Container";
         private static string SelectedGroupIndexUserSettingsKey = "AssetShelfWindow.SelectedGroupIndex";
+        private static string PreviewItemSizeUserSettingsKey = "AssetShelfWindow.PreviewItemSize";
 
         private AssetShelfContainer _container;
 
@@ -69,6 +70,15 @@ namespace AssetShelf
             catch (System.Exception)
             {
                 _selectedGroupIndex = 0;
+            }
+
+            try
+            {
+                _previewItemSize = float.Parse(EditorUserSettings.GetConfigValue(PreviewItemSizeUserSettingsKey));
+            }
+            catch (System.Exception)
+            {
+                _previewItemSize = 100;
             }
 
             _updateContentsRequired = true;
@@ -433,7 +443,15 @@ namespace AssetShelf
             {
                 var label = _selectedAsset == null ? string.Empty : _selectedAsset.name;
                 GUILayout.Label(label);
-                _previewItemSize = GUILayout.HorizontalSlider(_previewItemSize, 64, 256, GUILayout.MaxWidth(200));
+                using (var changeCheck = new EditorGUI.ChangeCheckScope())
+                {
+                    _previewItemSize = GUILayout.HorizontalSlider(_previewItemSize, 64, 256, GUILayout.MaxWidth(200));
+                    if (changeCheck.changed)
+                    {
+                        EditorUserSettings.SetConfigValue(PreviewItemSizeUserSettingsKey, _previewItemSize.ToString());
+                    }
+                }
+
                 GUILayout.Space(20);
             }
         }
