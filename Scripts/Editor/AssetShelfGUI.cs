@@ -21,7 +21,7 @@ namespace AssetShelf
         }
 
         private static GUIContent _loadingIcon;
-        public static void DrawGridItems(Rect rect, float itemSize, Vector2 spacing, IReadOnlyList<AssetShelfContent> contents, int start, int end)
+        public static void DrawGridItems(Rect rect, float itemSize, Vector2 spacing, IReadOnlyList<AssetShelfContent> contents, int start, int end, Object selectedItem)
         {
             if (_loadingIcon == null)
             {
@@ -45,12 +45,13 @@ namespace AssetShelf
                 );
 
                 var content = contents[i];
-                DrawGridItem(imageRect, content);
+                var isSelected = selectedItem != null && content?.Asset == selectedItem;
+                DrawGridItem(imageRect, content, isSelected);
                 AssetShelfLog.LastDrawPreviewCount++;
             }
         }
 
-        public static void DrawGridItem(Rect rect, AssetShelfContent content)
+        public static void DrawGridItem(Rect rect, AssetShelfContent content, bool isSelected)
         {
             if (content == null || content.Asset == null || content.Preview == null)
             {
@@ -59,6 +60,10 @@ namespace AssetShelf
             else
             {
                 GUI.DrawTexture(rect, content.Preview);
+                if (isSelected)
+                {
+                    HighlightBox(rect);
+                }
             }
         }
 
@@ -73,6 +78,21 @@ namespace AssetShelf
             var column = Mathf.FloorToInt((position.x - rect.x) / (itemSize + spacing.x));
             var row = Mathf.FloorToInt((position.y - rect.y) / (itemSize + spacing.y));
             return column + row * columnCount;
+        }
+
+        private static GUIStyle HighlightBoxStyle;
+        private static Color HighlightBgColor = new Color(1f, 1f, 1f, 0.1f);
+        public static void HighlightBox(Rect rect)
+        {
+            if (HighlightBoxStyle == null)
+            {
+                HighlightBoxStyle = new GUIStyle(GUI.skin.box);
+                HighlightBoxStyle.normal.background = EditorGUIUtility.whiteTexture;
+            }
+            using (new BackgroundColorScope(HighlightBgColor))
+            {
+                GUI.Box(rect, GUIContent.none, HighlightBoxStyle);
+            }
         }
 
         public class BackgroundColorScope : System.IDisposable

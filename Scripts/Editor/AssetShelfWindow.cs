@@ -391,7 +391,7 @@ namespace AssetShelf
                 _isLoadingPreviews = contents.Skip(startIndex).Take(endIndex - startIndex).Any(c => c.Preview == null);
                 _loadingStart = startIndex;
                 _loadingEnd = endIndex;
-                AssetShelfGUI.DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex);
+                AssetShelfGUI.DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex, _selectedAsset);
             }
 
             // Select and drag
