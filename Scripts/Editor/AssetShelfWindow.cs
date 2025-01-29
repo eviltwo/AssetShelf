@@ -302,6 +302,8 @@ namespace AssetShelf
             GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
         }
 
+        private Object _selectedAsset = null;
+
         private void DrawAssetView(Rect rect)
         {
             var contents = _filteredContents;
@@ -335,27 +337,37 @@ namespace AssetShelf
                 AssetShelfGUI.DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex);
             }
 
-            if (Event.current.type == EventType.MouseDrag)
+            if (Event.current.type == EventType.MouseDown)
             {
                 var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
                 var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
                 if (selectedIndex >= 0 && selectedIndex < contents.Count)
                 {
-                    var selectedAsset = contents[selectedIndex].Asset;
-                    if (selectedAsset != null)
-                    {
-                        // Clear drag data
-                        DragAndDrop.PrepareStartDrag();
+                    _selectedAsset = contents[selectedIndex].Asset;
+                }
+                else
+                {
+                    _selectedAsset = null;
+                }
+            }
 
-                        // Set up drag data
-                        DragAndDrop.objectReferences = new Object[] { selectedAsset };
+            if (Event.current.type == EventType.MouseDrag)
+            {
+                var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
+                var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
+                if (selectedIndex >= 0 && selectedIndex < contents.Count && _selectedAsset != null && contents[selectedIndex].Asset == _selectedAsset)
+                {
+                    // Clear drag data
+                    DragAndDrop.PrepareStartDrag();
 
-                        // Start drag
-                        DragAndDrop.StartDrag($"Dragging Asset: {selectedAsset.name}");
+                    // Set up drag data
+                    DragAndDrop.objectReferences = new Object[] { _selectedAsset };
 
-                        // Make sure no one uses the event after us
-                        Event.current.Use();
-                    }
+                    // Start drag
+                    DragAndDrop.StartDrag($"Dragging Asset: {_selectedAsset.name}");
+
+                    // Make sure no one uses the event after us
+                    Event.current.Use();
                 }
             }
         }

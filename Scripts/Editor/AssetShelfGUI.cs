@@ -83,6 +83,11 @@ namespace AssetShelf
 
         public static int GetIndexInGridView(float itemSize, Vector2 spacing, Rect rect, Vector2 position)
         {
+            if (!rect.Contains(position))
+            {
+                return -1;
+            }
+
             var columnCount = GetGridColumnCount(itemSize, spacing.x, rect.width);
             var column = Mathf.FloorToInt((position.x - rect.x) / (itemSize + spacing.x));
             var row = Mathf.FloorToInt((position.y - rect.y) / (itemSize + spacing.y));
