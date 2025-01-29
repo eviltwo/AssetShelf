@@ -233,6 +233,7 @@ namespace AssetShelf
                     if (changeCheck.changed)
                     {
                         _updateContentsRequired = true;
+                        _selectedAsset = null;
                         if (_container != null)
                         {
                             var containerGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_container));
@@ -295,6 +296,7 @@ namespace AssetShelf
                 EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, _selectedGroupIndex.ToString());
                 _filteredContentsGenerated = true;
                 _assetViewScrollPosition = Vector2.zero;
+                _selectedAsset = null;
                 LoadContentGroupIfNull(_selectedGroupIndex);
                 _filteredContents.Clear();
                 if (!string.IsNullOrEmpty(_selectedPath))
