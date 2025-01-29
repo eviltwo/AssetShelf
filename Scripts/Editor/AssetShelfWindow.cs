@@ -292,50 +292,6 @@ namespace AssetShelf
             }
         }
 
-        private void DrawInnerDirectories(AssetShelfContentDirectory directory, List<(int group, string path)> foldoutPaths, int group)
-        {
-            var childDirectories = directory.Childs;
-            using (new EditorGUI.IndentLevelScope())
-            {
-                for (int i = 0; i < childDirectories.Count; i++)
-                {
-                    var child = childDirectories[i];
-                    var selected = group == _selectedGroupIndex && child.Path == _selectedPath;
-                    if (child.Childs.Count > 0)
-                    {
-                        var foldoutIndex = foldoutPaths.FindIndex(v => v.group == group && v.path == child.Path);
-                        var prevFoldout = foldoutIndex >= 0;
-                        var currentFoldout = prevFoldout;
-                        if (AssetShelfGUILayout.FoldoutSelectButton(selected, child.ShortName, ref currentFoldout))
-                        {
-                            _selectedGroupIndex = group;
-                            _selectedPath = child.Path;
-                        }
-                        if (!prevFoldout && currentFoldout)
-                        {
-                            foldoutPaths.Add((group, child.Path));
-                        }
-                        else if (prevFoldout && !currentFoldout)
-                        {
-                            foldoutPaths.RemoveAt(foldoutIndex);
-                        }
-                        if (currentFoldout)
-                        {
-                            DrawInnerDirectories(child, foldoutPaths, group);
-                        }
-                    }
-                    else
-                    {
-                        if (AssetShelfGUILayout.SelectButton(selected, child.ShortName))
-                        {
-                            _selectedGroupIndex = group;
-                            _selectedPath = child.Path;
-                        }
-                    }
-                }
-            }
-        }
-
         private void DrawDebugViewLayout()
         {
             if (GUILayout.Button("Clear"))
