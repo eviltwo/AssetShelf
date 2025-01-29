@@ -70,7 +70,7 @@ namespace AssetShelf
 
         private EditorWindow GetProjectWindow()
         {
-            return EditorWindow.GetWindow(ProjectBrowserType);
+            return EditorWindow.GetWindow(ProjectBrowserType, false, "Project", false);
         }
 
         private void SetLockState(bool isLock)
