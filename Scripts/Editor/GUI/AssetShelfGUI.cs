@@ -79,36 +79,5 @@ namespace AssetShelf
             var row = Mathf.FloorToInt((position.y - rect.y) / (itemSize + spacing.y));
             return column + row * columnCount;
         }
-
-        private static GUIStyle HighlightBoxStyle;
-        private static Color HighlightBgColor = new Color(1f, 1f, 1f, 0.1f);
-        public static void HighlightBox(Rect rect)
-        {
-            if (HighlightBoxStyle == null)
-            {
-                HighlightBoxStyle = new GUIStyle(GUI.skin.box);
-                HighlightBoxStyle.normal.background = EditorGUIUtility.whiteTexture;
-            }
-            using (new BackgroundColorScope(HighlightBgColor))
-            {
-                GUI.Box(rect, GUIContent.none, HighlightBoxStyle);
-            }
-        }
-
-        public class BackgroundColorScope : System.IDisposable
-        {
-            private Color _previousColor;
-
-            public BackgroundColorScope(Color color)
-            {
-                _previousColor = GUI.backgroundColor;
-                GUI.backgroundColor = color;
-            }
-
-            public void Dispose()
-            {
-                GUI.backgroundColor = _previousColor;
-            }
-        }
     }
 }
