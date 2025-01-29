@@ -6,13 +6,22 @@ namespace AssetShelf
 {
     public class AssetShelfContent
     {
+        private static int LoadAssetCount;
+        public static int LoadAssetLimit = 1;
+        public static bool IsLimitted => LoadAssetCount >= LoadAssetLimit;
+
+        public static void ResetLoadAssetCount()
+        {
+            LoadAssetCount = 0;
+        }
+
         private Object _asset;
 
         public Object Asset
         {
             get
             {
-                if (_asset == null)
+                if (_asset == null && LoadAssetCount < LoadAssetLimit)
                 {
                     _asset = AssetDatabase.LoadAssetAtPath<Object>(Path);
                 }

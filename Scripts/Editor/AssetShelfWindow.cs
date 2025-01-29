@@ -84,6 +84,8 @@ namespace AssetShelf
 
         public void OnGUI()
         {
+            AssetShelfContent.ResetLoadAssetCount();
+
             if (_container != null && _lastContainerVersion != _container.PropertyVersion)
             {
                 _updateContentsRequired = true;
@@ -146,6 +148,12 @@ namespace AssetShelf
             if (AssetShelfLog.LastDrawPreviewCount * 2 > 128)
             {
                 AssetPreview.SetPreviewTextureCacheSize(AssetShelfLog.LastDrawPreviewCount * 2);
+            }
+
+            if (AssetShelfContent.IsLimitted)
+            {
+                Repaint();
+                AssetShelfLog.RepaintCallCount++;
             }
         }
 
