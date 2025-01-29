@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 namespace AssetShelf
@@ -33,8 +34,6 @@ namespace AssetShelf
 
         private bool _updateContentsRequired;
 
-        private List<(int group, string path)> _foldoutPaths = new List<(int group, string path)>();
-
         private int _selectedGroupIndex = 0;
 
         private string _selectedPath = "";
@@ -54,6 +53,11 @@ namespace AssetShelf
         private int _loadingEnd;
 
         private bool _showDebugView;
+
+        [SerializeField]
+        private TreeViewState _treeViewState;
+
+        private AssetShelfTreeView _treeView;
 
         private void OnEnable()
         {
@@ -80,6 +84,12 @@ namespace AssetShelf
             {
                 _previewItemSize = 100;
             }
+
+            if (_treeViewState == null)
+            {
+                _treeViewState = new TreeViewState();
+            }
+            _treeView = new AssetShelfTreeView(_treeViewState);
 
             _updateContentsRequired = true;
         }
@@ -149,6 +159,8 @@ namespace AssetShelf
                     }
                     _contentGroups = new AssetShelfContentGroup[_contentGroupCount];
                     _lastContainerVersion = _container.PropertyVersion;
+                    _treeView.Setup(_container);
+                    _treeView.Reload();
                 }
             }
 
@@ -170,11 +182,7 @@ namespace AssetShelf
             var actualDebugViewHeight = _showDebugView ? debugViewHeight : 0;
 
             var sidebarRect = new Rect(0, headerHeight, sidebarWidth, position.height - headerHeight - actualDebugViewHeight);
-            GUI.Box(sidebarRect, GUIContent.none);
-            using (new GUILayout.AreaScope(sidebarRect))
-            {
-                DrawSidebarLayout();
-            }
+            DrawTreeView(sidebarRect);
 
             if (_showDebugView)
             {
@@ -252,51 +260,18 @@ namespace AssetShelf
             }
         }
 
-        private void DrawSidebarLayout()
+        private void DrawTreeView(Rect rect)
         {
-            if (_contentGroups == null || _contentGroups.Length == 0)
-            {
-                return;
-            }
+            _treeView.OnGUI(rect);
 
             var oldSelectedGroupIndex = _selectedGroupIndex;
             var oldSelectedPath = _selectedPath;
-            using (var scroll = new EditorGUILayout.ScrollViewScope(_contentGroupScrollPosition, GUIStyle.none, GUI.skin.verticalScrollbar))
+            _treeView.GetSelectedContent(out _selectedGroupIndex, out _selectedPath);
+            if (_selectedGroupIndex < 0)
             {
-                _contentGroupScrollPosition = scroll.scrollPosition;
-                for (int i = 0; i < _contentGroupCount; i++)
-                {
-                    var contentGroupName = _contentGroupNames[i];
-                    var selected = i == _selectedGroupIndex && string.IsNullOrEmpty(_selectedPath);
-                    var groupFoldoutIndex = _foldoutPaths.FindIndex(v => v.group == i && string.IsNullOrEmpty(v.path));
-                    var prevFoldout = groupFoldoutIndex >= 0;
-                    var currentFoldout = prevFoldout;
-                    if (AssetShelfGUILayout.FoldoutSelectButton(selected, contentGroupName, ref currentFoldout))
-                    {
-                        _selectedGroupIndex = i;
-                        _selectedPath = "";
-                    }
-                    if (!prevFoldout && currentFoldout)
-                    {
-                        _foldoutPaths.Add((i, ""));
-                    }
-                    else if (prevFoldout && !currentFoldout)
-                    {
-                        _foldoutPaths.RemoveAt(groupFoldoutIndex);
-                    }
-                    if (currentFoldout)
-                    {
-                        if (_directoryAnalyzers[i] == null)
-                        {
-                            LoadContentGroupIfNull(i);
-                            _directoryAnalyzers[i] = new AssetShelfContentDirectoryAnalyzer(_contentGroups[i]);
-                        }
-
-                        DrawInnerDirectories(_directoryAnalyzers[i].Root, _foldoutPaths, i);
-                    }
-                }
+                _selectedGroupIndex = 0;
+                _selectedPath = string.Empty;
             }
-
             if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath || !_filteredContentsGenerated)
             {
                 EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, _selectedGroupIndex.ToString());
