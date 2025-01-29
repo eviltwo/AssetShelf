@@ -20,8 +20,14 @@ namespace AssetShelf
             return columnCount;
         }
 
+        private static GUIContent _loadingIcon;
         public static void DrawGridItems(Rect rect, float itemSize, Vector2 spacing, IReadOnlyList<AssetShelfContent> contents, int start, int end)
         {
+            if (_loadingIcon == null)
+            {
+                _loadingIcon = EditorGUIUtility.IconContent("Loading");
+            }
+
             AssetShelfLog.LastDrawPreviewCount = 0;
             var columnCount = GetGridColumnCount(itemSize, spacing.x, rect.width);
             for (int i = start; i < end; i++)
@@ -31,34 +37,47 @@ namespace AssetShelf
                     break;
                 }
 
-                var content = contents[i];
-                if (content == null || content.Asset == null)
-                {
-                    continue;
-                }
-
-                var preview = content.Preview;
-                if (preview == null)
-                {
-                    preview = content.MiniPreview;
-                }
-                if (preview == null)
-                {
-                    preview = AssetPreview.GetMiniTypeThumbnail(content.Asset.GetType());
-                }
-                if (preview == null)
-                {
-                    preview = EditorGUIUtility.whiteTexture;
-                }
-
                 var imageRect = new Rect(
                     rect.x + (i % columnCount) * (itemSize + spacing.x),
                     rect.y + (i / columnCount) * (itemSize + spacing.y),
                     itemSize,
                     itemSize
                 );
-                GUI.DrawTexture(imageRect, preview);
+
+                var content = contents[i];
+                DrawGridItem(imageRect, content);
                 AssetShelfLog.LastDrawPreviewCount++;
+            }
+        }
+
+        public static void DrawGridItem(Rect rect, AssetShelfContent content)
+        {
+            if (content == null || content.Asset == null)
+            {
+                return;
+            }
+
+            var preview = content.Preview;
+            if (preview == null)
+            {
+                preview = content.MiniPreview;
+            }
+            if (preview == null)
+            {
+                preview = AssetPreview.GetMiniTypeThumbnail(content.Asset.GetType());
+            }
+            if (preview == null)
+            {
+                preview = EditorGUIUtility.whiteTexture;
+            }
+
+            if (AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            {
+                GUI.Box(rect, _loadingIcon);
+            }
+            else
+            {
+                GUI.DrawTexture(rect, preview);
             }
         }
 
