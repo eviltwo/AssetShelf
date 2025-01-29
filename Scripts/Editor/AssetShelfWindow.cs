@@ -19,6 +19,7 @@ namespace AssetShelf
         private static string ContainerGuidUserSettingsKey = "AssetShelfWindow.Container";
         private static string SelectedGroupIndexUserSettingsKey = "AssetShelfWindow.SelectedGroupIndex";
         private static string PreviewItemSizeUserSettingsKey = "AssetShelfWindow.PreviewItemSize";
+        private static string TreeViewStateUserSettingsKey = "AssetShelfWindow.TreeViewState";
 
         private AssetShelfContainer _container;
 
@@ -54,7 +55,6 @@ namespace AssetShelf
 
         private bool _showDebugView;
 
-        [SerializeField]
         private TreeViewState _treeViewState;
 
         private AssetShelfTreeView _treeView;
@@ -86,13 +86,38 @@ namespace AssetShelf
                 _previewItemSize = 100;
             }
 
-            if (_treeViewState == null)
+            try
+            {
+                var json = EditorUserSettings.GetConfigValue(TreeViewStateUserSettingsKey);
+                if (!string.IsNullOrEmpty(json))
+                {
+                    _treeViewState = JsonUtility.FromJson<TreeViewState>(json);
+                }
+            }
+            catch (System.Exception)
             {
                 _treeViewState = new TreeViewState();
             }
+
             _treeView = new AssetShelfTreeView(_treeViewState);
 
             _updateContentsRequired = true;
+        }
+
+        private void OnDisable()
+        {
+            if (_treeViewState != null)
+            {
+                try
+                {
+                    var json = JsonUtility.ToJson(_treeViewState);
+                    EditorUserSettings.SetConfigValue(TreeViewStateUserSettingsKey, json);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogException(e);
+                }
+            }
         }
 
         public void AddItemsToMenu(GenericMenu menu)
