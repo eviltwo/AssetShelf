@@ -15,6 +15,9 @@ namespace AssetShelf
             window.Show();
         }
 
+        private static string ContainerGuidUserSettingsKey = "AssetShelfWindow.Container";
+        private static string SelectedGroupIndexUserSettingsKey = "AssetShelfWindow.SelectedGroupIndex";
+
         private AssetShelfContainer _container;
 
         private int _lastContainerVersion;
@@ -51,6 +54,21 @@ namespace AssetShelf
 
         private void OnEnable()
         {
+            var containerGuid = EditorUserSettings.GetConfigValue(ContainerGuidUserSettingsKey);
+            if (!string.IsNullOrEmpty(containerGuid))
+            {
+                _container = AssetDatabase.LoadAssetAtPath<AssetShelfContainer>(AssetDatabase.GUIDToAssetPath(containerGuid));
+            }
+
+            try
+            {
+                _selectedGroupIndex = int.Parse(EditorUserSettings.GetConfigValue(SelectedGroupIndexUserSettingsKey));
+            }
+            catch (System.Exception)
+            {
+                _selectedGroupIndex = 0;
+            }
+
             _updateContentsRequired = true;
         }
 
@@ -184,6 +202,11 @@ namespace AssetShelf
                     if (changeCheck.changed)
                     {
                         _updateContentsRequired = true;
+                        if (_container != null)
+                        {
+                            var containerGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_container));
+                            EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, containerGuid);
+                        }
                         Repaint();
                         AssetShelfLog.RepaintCallCount++;
                     }
@@ -238,6 +261,7 @@ namespace AssetShelf
 
             if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath || !_filteredContentsGenerated)
             {
+                EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, _selectedGroupIndex.ToString());
                 _filteredContentsGenerated = true;
                 _assetViewScrollPosition = Vector2.zero;
                 LoadContentGroupIfNull(_selectedGroupIndex);
