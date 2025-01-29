@@ -153,7 +153,7 @@ namespace AssetShelf
             }
 
             const float singleLineHeight = 18;
-            const float headerHeight = singleLineHeight * 2;
+            const float headerHeight = singleLineHeight * 1 + 4;
             const float sidebarWidth = 200;
             const float debugViewHeight = singleLineHeight * 4;
             const float footerHeight = singleLineHeight * 1;
@@ -197,6 +197,12 @@ namespace AssetShelf
             {
                 DrawFooterLayout();
             }
+
+            // Lines
+            var lineColor = new Color(0.1f, 0.1f, 0.1f, 1);
+            AssetShelfGUI.HorizontalLine(new Vector2(0, headerHeight), position.width, 1, lineColor);
+            AssetShelfGUI.VerticalLine(new Vector2(sidebarWidth, headerHeight), position.height - headerHeight, 2, lineColor);
+            AssetShelfGUI.HorizontalLine(new Vector2(sidebarWidth, position.height - footerHeight), position.width - sidebarWidth, 1, lineColor);
 
             // Resize preview chashe size
             if (AssetShelfLog.LastDrawPreviewCount * 2 > 128)
