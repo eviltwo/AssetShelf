@@ -28,6 +28,11 @@ namespace AssetShelf
 
         public void Update()
         {
+            if (_obj != null && _obj == Selection.activeObject)
+            {
+                _obj = null;
+            }
+
             if (_obj != null)
             {
                 if (_lock != null)

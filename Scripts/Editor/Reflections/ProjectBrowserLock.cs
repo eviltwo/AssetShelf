@@ -53,7 +53,6 @@ namespace AssetShelf
                 try
                 {
                     SetLockState(BeforeLockState);
-                    _projectWindow.Repaint();
                 }
                 catch (Exception e)
                 {
