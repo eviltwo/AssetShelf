@@ -44,20 +44,32 @@ namespace AssetShelf
                 return;
             }
 
-            if (content.MiniPreview == null)
+            if (AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
             {
-                content.MiniPreview = AssetPreview.GetMiniThumbnail(content.Asset);
+                return;
             }
-            if (!content.SkipPreview && !AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
-            {
-                content.Preview = AssetPreview.GetAssetPreview(content.Asset);
-                AssetShelfLog.LoadPreviewTotalCount++;
 
-                if (content.Preview == null && !AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
-                {
-                    content.SkipPreview = true;
-                }
+            // Requesting every time to prevent the AssetPreview cache from being cleared.
+            AssetShelfLog.PreviewRequestCount++;
+            content.Preview = AssetPreview.GetAssetPreview(content.Asset);
+            if (content.Preview != null || AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            {
+                return;
             }
+
+            content.Preview = AssetPreview.GetMiniThumbnail(content.Asset);
+            if (content.Preview != null || AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            {
+                return;
+            }
+
+            content.Preview = AssetPreview.GetMiniTypeThumbnail(content.Asset.GetType());
+            if (content.Preview != null || AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            {
+                return;
+            }
+
+            content.Preview = EditorGUIUtility.whiteTexture;
         }
     }
 }

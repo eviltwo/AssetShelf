@@ -30,9 +30,7 @@ namespace AssetShelf
         }
 
         public string Path;
-        public Texture2D MiniPreview;
         public Texture2D Preview;
-        public bool SkipPreview;
     }
 
     public class AssetShelfContentGroup

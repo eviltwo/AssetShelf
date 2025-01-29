@@ -57,27 +57,13 @@ namespace AssetShelf
                 return;
             }
 
-            var preview = content.Preview;
-            if (preview == null)
-            {
-                preview = content.MiniPreview;
-            }
-            if (preview == null)
-            {
-                preview = AssetPreview.GetMiniTypeThumbnail(content.Asset.GetType());
-            }
-            if (preview == null)
-            {
-                preview = EditorGUIUtility.whiteTexture;
-            }
-
-            if (AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            if (content.Preview == null)
             {
                 GUI.Box(rect, _loadingIcon);
             }
             else
             {
-                GUI.DrawTexture(rect, preview);
+                GUI.DrawTexture(rect, content.Preview);
             }
         }
 

@@ -304,8 +304,8 @@ namespace AssetShelf
             {
                 AssetShelfLog.Clear();
             }
-            GUILayout.Label($"Load preview total: {AssetShelfLog.LoadPreviewTotalCount}");
-            GUILayout.Label($"Last draw preview: {AssetShelfLog.LastDrawPreviewCount}");
+            GUILayout.Label($"Preview request: {AssetShelfLog.PreviewRequestCount}");
+            GUILayout.Label($"Draw preview: {AssetShelfLog.LastDrawPreviewCount}");
             GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
         }
 
@@ -329,11 +329,10 @@ namespace AssetShelf
                 var endIndex = endRow * columnCount;
                 endIndex = Mathf.Min(endIndex, contents.Count);
                 AssetShelfUtility.LoadPreviewsIfNeeded(contents, startIndex, endIndex);
-                var isLoadingPreview = contents.Skip(startIndex).Take(endIndex - startIndex).Any(c => c.Preview == null && !c.SkipPreview);
                 for (int i = startIndex; i < endIndex; i++)
                 {
                     var content = contents[i];
-                    if (content != null && content.Preview == null && !content.SkipPreview)
+                    if (content != null && content.Preview == null)
                     {
                         if (!_waitingPreviews.Contains(content.Asset))
                         {
