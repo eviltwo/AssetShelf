@@ -54,7 +54,6 @@ namespace AssetShelf
             }
 
             // Requesting every time to prevent the AssetPreview cache from being cleared.
-            AssetShelfLog.PreviewRequestCount++;
             content.Preview = AssetPreview.GetAssetPreview(content.Asset);
             if (content.Preview != null)
             {

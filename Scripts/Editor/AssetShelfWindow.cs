@@ -304,7 +304,6 @@ namespace AssetShelf
             {
                 AssetShelfLog.Clear();
             }
-            GUILayout.Label($"Preview request: {AssetShelfLog.PreviewRequestCount}");
             GUILayout.Label($"Draw preview: {AssetShelfLog.LastDrawPreviewCount}");
             GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
         }
