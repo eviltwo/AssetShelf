@@ -39,7 +39,9 @@ namespace AssetShelf
 
         private List<AssetShelfContent> _filteredContents = new List<AssetShelfContent>();
 
-        private Vector2 _scrollPosition;
+        private Vector2 _contentGroupScrollPosition;
+
+        private Vector2 _assetViewScrollPosition;
 
         private List<Object> _waitingPreviews = new List<Object>();
 
@@ -191,42 +193,46 @@ namespace AssetShelf
 
             var oldSelectedGroupIndex = _selectedGroupIndex;
             var oldSelectedPath = _selectedPath;
-            for (int i = 0; i < _contentGroupCount; i++)
+            using (var scroll = new EditorGUILayout.ScrollViewScope(_contentGroupScrollPosition, GUIStyle.none, GUI.skin.verticalScrollbar))
             {
-                var contentGroupName = _contentGroupNames[i];
-                var selected = i == _selectedGroupIndex && string.IsNullOrEmpty(_selectedPath);
-                var groupFoldoutIndex = _foldoutPaths.FindIndex(v => v.group == i && string.IsNullOrEmpty(v.path));
-                var prevFoldout = groupFoldoutIndex >= 0;
-                var currentFoldout = prevFoldout;
-                if (AssetShelfGUILayout.FoldoutSelectButton(selected, contentGroupName, ref currentFoldout))
+                _contentGroupScrollPosition = scroll.scrollPosition;
+                for (int i = 0; i < _contentGroupCount; i++)
                 {
-                    _selectedGroupIndex = i;
-                    _selectedPath = "";
-                }
-                if (!prevFoldout && currentFoldout)
-                {
-                    _foldoutPaths.Add((i, ""));
-                }
-                else if (prevFoldout && !currentFoldout)
-                {
-                    _foldoutPaths.RemoveAt(groupFoldoutIndex);
-                }
-                if (currentFoldout)
-                {
-                    if (_directoryAnalyzers[i] == null)
+                    var contentGroupName = _contentGroupNames[i];
+                    var selected = i == _selectedGroupIndex && string.IsNullOrEmpty(_selectedPath);
+                    var groupFoldoutIndex = _foldoutPaths.FindIndex(v => v.group == i && string.IsNullOrEmpty(v.path));
+                    var prevFoldout = groupFoldoutIndex >= 0;
+                    var currentFoldout = prevFoldout;
+                    if (AssetShelfGUILayout.FoldoutSelectButton(selected, contentGroupName, ref currentFoldout))
                     {
-                        LoadContentGroupIfNull(i);
-                        _directoryAnalyzers[i] = new AssetShelfContentDirectoryAnalyzer(_contentGroups[i]);
+                        _selectedGroupIndex = i;
+                        _selectedPath = "";
                     }
+                    if (!prevFoldout && currentFoldout)
+                    {
+                        _foldoutPaths.Add((i, ""));
+                    }
+                    else if (prevFoldout && !currentFoldout)
+                    {
+                        _foldoutPaths.RemoveAt(groupFoldoutIndex);
+                    }
+                    if (currentFoldout)
+                    {
+                        if (_directoryAnalyzers[i] == null)
+                        {
+                            LoadContentGroupIfNull(i);
+                            _directoryAnalyzers[i] = new AssetShelfContentDirectoryAnalyzer(_contentGroups[i]);
+                        }
 
-                    DrawInnerDirectories(_directoryAnalyzers[i].Root, _foldoutPaths, i);
+                        DrawInnerDirectories(_directoryAnalyzers[i].Root, _foldoutPaths, i);
+                    }
                 }
             }
 
             if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath || !_filteredContentsGenerated)
             {
                 _filteredContentsGenerated = true;
-                _scrollPosition = Vector2.zero;
+                _assetViewScrollPosition = Vector2.zero;
                 LoadContentGroupIfNull(_selectedGroupIndex);
                 _filteredContents.Clear();
                 if (!string.IsNullOrEmpty(_selectedPath))
@@ -304,13 +310,13 @@ namespace AssetShelf
             var scrollbarWidth = 15;
             var viewHeight = AssetShelfGUI.GetGridViewHeight(itemSize, spacing, rect.width - scrollbarWidth, contents.Count);
             var viewRect = new Rect(0, 0, rect.width - scrollbarWidth, viewHeight);
-            using (var scrollView = new GUI.ScrollViewScope(rect, _scrollPosition, viewRect))
+            using (var scrollView = new GUI.ScrollViewScope(rect, _assetViewScrollPosition, viewRect))
             {
-                _scrollPosition = scrollView.scrollPosition;
+                _assetViewScrollPosition = scrollView.scrollPosition;
                 var columnCount = AssetShelfGUI.GetGridColumnCount(itemSize, spacing.x, viewRect.width);
-                var startRow = Mathf.FloorToInt(_scrollPosition.y / (itemSize + spacing.y));
+                var startRow = Mathf.FloorToInt(_assetViewScrollPosition.y / (itemSize + spacing.y));
                 var startIndex = startRow * columnCount;
-                var endRow = Mathf.CeilToInt((_scrollPosition.y + rect.height) / (itemSize + spacing.y));
+                var endRow = Mathf.CeilToInt((_assetViewScrollPosition.y + rect.height) / (itemSize + spacing.y));
                 var endIndex = endRow * columnCount;
                 endIndex = Mathf.Min(endIndex, contents.Count);
                 AssetShelfUtility.LoadPreviewsIfNeeded(contents, startIndex, endIndex);
@@ -331,7 +337,7 @@ namespace AssetShelf
 
             if (Event.current.type == EventType.MouseDrag)
             {
-                var gridViewMousePosition = Event.current.mousePosition - rect.position + _scrollPosition;
+                var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
                 var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
                 if (selectedIndex >= 0 && selectedIndex < contents.Count)
                 {
