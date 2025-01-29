@@ -48,7 +48,7 @@ namespace AssetShelf
             {
                 content.MiniPreview = AssetPreview.GetMiniThumbnail(content.Asset);
             }
-            if (content.Preview == null && !content.SkipPreview && !AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            if (!content.SkipPreview && !AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
             {
                 content.Preview = AssetPreview.GetAssetPreview(content.Asset);
                 AssetShelfLog.LoadPreviewTotalCount++;

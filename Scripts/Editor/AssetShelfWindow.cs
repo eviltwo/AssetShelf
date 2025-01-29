@@ -141,7 +141,7 @@ namespace AssetShelf
 
             var assetViewRect = new Rect(sidebarRect.width, headerRect.height, position.width - sidebarRect.width, position.height - headerRect.height);
             DrawAssetView(assetViewRect);
-            if (AssetShelfLog.LastDrawPreviewCount > 128)
+            if (AssetShelfLog.LastDrawPreviewCount * 2 > 128)
             {
                 AssetPreview.SetPreviewTextureCacheSize(AssetShelfLog.LastDrawPreviewCount * 2);
             }
