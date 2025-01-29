@@ -165,6 +165,7 @@ namespace AssetShelf
                     {
                         _updateContentsRequired = true;
                         Repaint();
+                        AssetShelfLog.RepaintCallCount++;
                     }
                 }
 
@@ -175,6 +176,7 @@ namespace AssetShelf
                     {
                         _updateContentsRequired = true;
                         Repaint();
+                        AssetShelfLog.RepaintCallCount++;
                     }
                 }
             }
