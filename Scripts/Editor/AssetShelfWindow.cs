@@ -67,7 +67,7 @@ namespace AssetShelf
                 for (int i = _loadingStart; i < _loadingEnd && i < _filteredContents.Count; i++)
                 {
                     var content = _filteredContents[i];
-                    if (content != null && content.Asset == null && AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+                    if (content != null && content.Asset != null && AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
                     {
                         hasLoading = true;
                         break;

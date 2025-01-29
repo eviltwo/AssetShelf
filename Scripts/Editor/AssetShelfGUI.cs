@@ -52,12 +52,7 @@ namespace AssetShelf
 
         public static void DrawGridItem(Rect rect, AssetShelfContent content)
         {
-            if (content == null || content.Asset == null)
-            {
-                return;
-            }
-
-            if (content.Preview == null)
+            if (content == null || content.Asset == null || content.Preview == null)
             {
                 GUI.Box(rect, _loadingIcon);
             }

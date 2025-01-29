@@ -24,11 +24,14 @@ namespace AssetShelf
             return true;
         }
 
+        private static int PreviewLoadingCount;
+        private static int PreviewLoadingLimit = 1000;
         public static void LoadPreviewsIfNeeded(IReadOnlyList<AssetShelfContent> contents, int start, int end)
         {
+            PreviewLoadingCount = 0;
             for (int i = start; i < end; i++)
             {
-                if (i >= contents.Count)
+                if (i >= contents.Count || PreviewLoadingCount >= PreviewLoadingLimit)
                 {
                     break;
                 }
@@ -46,14 +49,21 @@ namespace AssetShelf
 
             if (AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
             {
+                PreviewLoadingCount++;
                 return;
             }
 
             // Requesting every time to prevent the AssetPreview cache from being cleared.
             AssetShelfLog.PreviewRequestCount++;
             content.Preview = AssetPreview.GetAssetPreview(content.Asset);
-            if (content.Preview != null || AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            if (content.Preview != null)
             {
+                return;
+            }
+
+            if (AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            {
+                PreviewLoadingCount++;
                 return;
             }
 
