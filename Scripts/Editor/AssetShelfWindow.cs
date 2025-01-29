@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
 namespace AssetShelf
@@ -55,6 +56,11 @@ namespace AssetShelf
 
         private bool _showDebugView;
 
+        [SerializeField]
+        private TreeViewState _treeViewState;
+
+        private AssetShelfTreeView _treeView;
+
         private void OnEnable()
         {
             var containerGuid = EditorUserSettings.GetConfigValue(ContainerGuidUserSettingsKey);
@@ -80,6 +86,12 @@ namespace AssetShelf
             {
                 _previewItemSize = 100;
             }
+
+            if (_treeViewState == null)
+            {
+                _treeViewState = new TreeViewState();
+            }
+            _treeView = new AssetShelfTreeView(_treeViewState);
 
             _updateContentsRequired = true;
         }
@@ -149,6 +161,8 @@ namespace AssetShelf
                     }
                     _contentGroups = new AssetShelfContentGroup[_contentGroupCount];
                     _lastContainerVersion = _container.PropertyVersion;
+                    _treeView.Setup(_container);
+                    _treeView.Reload();
                 }
             }
 
@@ -170,11 +184,14 @@ namespace AssetShelf
             var actualDebugViewHeight = _showDebugView ? debugViewHeight : 0;
 
             var sidebarRect = new Rect(0, headerHeight, sidebarWidth, position.height - headerHeight - actualDebugViewHeight);
+            DrawTreeView(sidebarRect);
+            /*
             GUI.Box(sidebarRect, GUIContent.none);
             using (new GUILayout.AreaScope(sidebarRect))
             {
                 DrawSidebarLayout();
             }
+            */
 
             if (_showDebugView)
             {
@@ -248,6 +265,38 @@ namespace AssetShelf
                         Repaint();
                         AssetShelfLog.RepaintCallCount++;
                     }
+                }
+            }
+        }
+
+        private void DrawTreeView(Rect rect)
+        {
+            _treeView.OnGUI(rect);
+
+            var oldSelectedGroupIndex = _selectedGroupIndex;
+            var oldSelectedPath = _selectedPath;
+            _treeView.GetSelectedContent(out _selectedGroupIndex, out _selectedPath);
+            if (_selectedGroupIndex < 0)
+            {
+                _selectedGroupIndex = 0;
+                _selectedPath = string.Empty;
+            }
+            if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath || !_filteredContentsGenerated)
+            {
+                EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, _selectedGroupIndex.ToString());
+                _filteredContentsGenerated = true;
+                _assetViewScrollPosition = Vector2.zero;
+                _selectedAsset = null;
+                LoadContentGroupIfNull(_selectedGroupIndex);
+                _filteredContents.Clear();
+                if (!string.IsNullOrEmpty(_selectedPath))
+                {
+                    var selectedGroup = _contentGroups[_selectedGroupIndex];
+                    _filteredContents.AddRange(selectedGroup.Contents.Where(c => AssetShelfUtility.HasDirectory(c.Path, _selectedPath)));
+                }
+                else
+                {
+                    _filteredContents.AddRange(_contentGroups[_selectedGroupIndex].Contents);
                 }
             }
         }
