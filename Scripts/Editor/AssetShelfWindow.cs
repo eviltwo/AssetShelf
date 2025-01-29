@@ -46,6 +46,8 @@ namespace AssetShelf
 
         private Vector2 _assetViewScrollPosition;
 
+        private float _previewItemSize = 100;
+
         private bool _isLoadingPreviews;
         private int _loadingStart;
         private int _loadingEnd;
@@ -140,16 +142,24 @@ namespace AssetShelf
                 }
             }
 
-            var headerRect = new Rect(0, 0, position.width, 40);
+            const float singleLineHeight = 18;
+            const float headerHeight = singleLineHeight * 2;
+            const float sidebarWidth = 200;
+            const float debugViewHeight = singleLineHeight * 4;
+            const float footerHeight = singleLineHeight * 1;
+
+            // Header
+            var headerRect = new Rect(0, 0, position.width, headerHeight);
             GUI.Box(headerRect, GUIContent.none);
             using (new GUILayout.AreaScope(headerRect))
             {
                 DrawHeaderLayout();
             }
 
-            var debugViewHeight = _showDebugView ? EditorGUIUtility.singleLineHeight * 4 : 0;
+            // Sidebar and debug view
+            var actualDebugViewHeight = _showDebugView ? debugViewHeight : 0;
 
-            var sidebarRect = new Rect(0, headerRect.height, 200, position.height - headerRect.height - debugViewHeight);
+            var sidebarRect = new Rect(0, headerHeight, sidebarWidth, position.height - headerHeight - actualDebugViewHeight);
             GUI.Box(sidebarRect, GUIContent.none);
             using (new GUILayout.AreaScope(sidebarRect))
             {
@@ -158,7 +168,7 @@ namespace AssetShelf
 
             if (_showDebugView)
             {
-                var debugViewRect = new Rect(0, position.height - debugViewHeight, sidebarRect.width, debugViewHeight);
+                var debugViewRect = new Rect(0, position.height - actualDebugViewHeight, sidebarWidth, actualDebugViewHeight);
                 GUI.Box(debugViewRect, GUIContent.none);
                 using (new GUILayout.AreaScope(debugViewRect))
                 {
@@ -166,8 +176,19 @@ namespace AssetShelf
                 }
             }
 
-            var assetViewRect = new Rect(sidebarRect.width, headerRect.height, position.width - sidebarRect.width, position.height - headerRect.height);
+            // Asset view
+            var assetViewRect = new Rect(sidebarWidth, headerHeight, position.width - sidebarWidth, position.height - headerHeight - footerHeight);
             DrawAssetView(assetViewRect);
+
+            // Footer
+            var footerRect = new Rect(sidebarWidth, position.height - footerHeight, position.width - sidebarWidth, footerHeight);
+            GUI.Box(footerRect, GUIContent.none);
+            using (new GUILayout.AreaScope(footerRect))
+            {
+                DrawFooterLayout();
+            }
+
+            // Resize preview chashe size
             if (AssetShelfLog.LastDrawPreviewCount * 2 > 128)
             {
                 AssetPreview.SetPreviewTextureCacheSize(AssetShelfLog.LastDrawPreviewCount * 2);
@@ -333,13 +354,16 @@ namespace AssetShelf
         }
 
         private Object _dragStartAsset = null;
+        private Object _selectedAsset = null;
 
         private void DrawAssetView(Rect rect)
         {
             var contents = _filteredContents;
-            var itemSize = 64;
+            var itemSize = _previewItemSize;
             var spacing = new Vector2(5, 5);
             var scrollbarWidth = 15;
+
+            // Draw grid view
             var viewHeight = AssetShelfGUI.GetGridViewHeight(itemSize, spacing, rect.width - scrollbarWidth, contents.Count);
             var viewRect = new Rect(0, 0, rect.width - scrollbarWidth, viewHeight);
             using (var scrollView = new GUI.ScrollViewScope(rect, _assetViewScrollPosition, viewRect))
@@ -358,6 +382,7 @@ namespace AssetShelf
                 AssetShelfGUI.DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex);
             }
 
+            // Select and drag
             if (Event.current.type == EventType.MouseDown)
             {
                 var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
@@ -367,6 +392,9 @@ namespace AssetShelf
                     && rect.Contains(Event.current.mousePosition))
                 {
                     _dragStartAsset = contents[selectedIndex].Asset;
+                    _selectedAsset = contents[selectedIndex].Asset;
+                    Repaint();
+                    AssetShelfLog.RepaintCallCount++;
                 }
                 else
                 {
@@ -388,12 +416,25 @@ namespace AssetShelf
                     DragAndDrop.PrepareStartDrag();
 
                     // Set up drag data
+                    DragAndDrop.objectReferences = new Object[] { _dragStartAsset };
 
                     // Start drag
+                    DragAndDrop.StartDrag($"Dragging Asset: {_dragStartAsset.name}");
 
                     // Make sure no one uses the event after us
                     Event.current.Use();
                 }
+            }
+        }
+
+        private void DrawFooterLayout()
+        {
+            using (new GUILayout.HorizontalScope())
+            {
+                var label = _selectedAsset == null ? string.Empty : _selectedAsset.name;
+                GUILayout.Label(label);
+                _previewItemSize = GUILayout.HorizontalSlider(_previewItemSize, 64, 256, GUILayout.MaxWidth(200));
+                GUILayout.Space(20);
             }
         }
     }
