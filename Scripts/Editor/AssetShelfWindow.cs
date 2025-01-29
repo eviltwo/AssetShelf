@@ -73,7 +73,7 @@ namespace AssetShelf
                     continue;
                 }
             }
-            if (repaintRequired)
+            if (repaintRequired && _waitingPreviews.Count == 0)
             {
                 Repaint();
                 AssetShelfLog.RepaintCallCount++;
