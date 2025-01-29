@@ -43,7 +43,9 @@ namespace AssetShelf
 
         private Vector2 _assetViewScrollPosition;
 
-        private List<Object> _waitingPreviews = new List<Object>();
+        private bool _isLoadingPreviews;
+        private int _loadingStart;
+        private int _loadingEnd;
 
         private bool _showDebugView;
 
@@ -59,26 +61,24 @@ namespace AssetShelf
 
         private void Update()
         {
-            var repaintRequired = false;
-            for (int i = _waitingPreviews.Count - 1; i >= 0; i--)
+            if (_isLoadingPreviews)
             {
-                var asset = _waitingPreviews[i];
-                if (asset == null)
+                var hasLoading = false;
+                for (int i = _loadingStart; i < _loadingEnd && i < _filteredContents.Count; i++)
                 {
-                    _waitingPreviews.RemoveAt(i);
-                    continue;
+                    var content = _filteredContents[i];
+                    if (content != null && content.Asset == null && AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+                    {
+                        hasLoading = true;
+                        break;
+                    }
                 }
-                if (!AssetPreview.IsLoadingAssetPreview(asset.GetInstanceID()))
+                if (!hasLoading)
                 {
-                    _waitingPreviews.RemoveAt(i);
-                    repaintRequired = true;
-                    continue;
+                    Repaint();
+                    AssetShelfLog.RepaintCallCount++;
+                    _isLoadingPreviews = false;
                 }
-            }
-            if (repaintRequired && _waitingPreviews.Count == 0)
-            {
-                Repaint();
-                AssetShelfLog.RepaintCallCount++;
             }
 
             if (AssetShelfContent.IsLimitted)
@@ -329,17 +329,9 @@ namespace AssetShelf
                 var endIndex = endRow * columnCount;
                 endIndex = Mathf.Min(endIndex, contents.Count);
                 AssetShelfUtility.LoadPreviewsIfNeeded(contents, startIndex, endIndex);
-                for (int i = startIndex; i < endIndex; i++)
-                {
-                    var content = contents[i];
-                    if (content != null && content.Preview == null)
-                    {
-                        if (!_waitingPreviews.Contains(content.Asset))
-                        {
-                            _waitingPreviews.Add(content.Asset);
-                        }
-                    }
-                }
+                _isLoadingPreviews = contents.Skip(startIndex).Take(endIndex - startIndex).Any(c => c.Preview == null);
+                _loadingStart = startIndex;
+                _loadingEnd = endIndex;
                 AssetShelfGUI.DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex);
             }
 
