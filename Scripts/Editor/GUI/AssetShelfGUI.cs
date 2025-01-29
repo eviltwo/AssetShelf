@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace AssetShelf
 {
-    public static class AssetShelfGUI
+    public static partial class AssetShelfGUI
     {
         public static float GetGridViewHeight(float itemSize, Vector2 spacing, float width, int itemCount)
         {
