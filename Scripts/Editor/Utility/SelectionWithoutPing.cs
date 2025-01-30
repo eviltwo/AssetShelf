@@ -9,13 +9,18 @@ namespace AssetShelf
         private ProjectBrowserLock _lock;
         private bool _isSelectionChanged;
 
+        private bool _isRunning;
+        public bool IsRunning => _isRunning;
+
         public SelectionWithoutPing()
         {
+            _isRunning = false;
             Selection.selectionChanged += OnSelectionChanged;
         }
 
         public void Dispose()
         {
+            _isRunning = false;
             Selection.selectionChanged -= OnSelectionChanged;
             _lock?.Dispose();
             _lock = null;
@@ -23,32 +28,43 @@ namespace AssetShelf
 
         public void Select(Object obj)
         {
-            _obj = obj;
+            if (!_isRunning)
+            {
+                _isRunning = true;
+                _obj = obj;
+            }
         }
 
         public void Update()
         {
-            if (_obj != null && _obj == Selection.activeObject)
+            if (_isRunning)
             {
-                _obj = null;
-            }
-
-            if (_obj != null)
-            {
-                if (_lock != null)
+                if (_lock == null)
                 {
-                    _lock.Dispose();
-                }
-                _lock = new ProjectBrowserLock();
-                Selection.activeObject = _obj;
-                _obj = null;
-                _isSelectionChanged = false;
-            }
+                    if (_obj == null)
+                    {
+                        _isRunning = false;
+                        return;
+                    }
 
-            if (_lock != null && _isSelectionChanged)
-            {
-                _lock.Dispose();
-                _lock = null;
+                    if (_obj == Selection.activeObject)
+                    {
+                        _obj = null;
+                        _isRunning = false;
+                        return;
+                    }
+
+                    _lock = new ProjectBrowserLock();
+                    _isSelectionChanged = false;
+                    Selection.activeObject = _obj;
+                }
+                else if (_isSelectionChanged)
+                {
+                    _isRunning = false;
+                    _obj = null;
+                    _lock.Dispose();
+                    _lock = null;
+                }
             }
         }
 

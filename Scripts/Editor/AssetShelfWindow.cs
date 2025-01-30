@@ -343,9 +343,9 @@ namespace AssetShelf
             GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
         }
 
-        private Object _dragStartAsset = null;
         private Object _selectedAsset = null;
-
+        private Object _grabbedAsset = null;
+        private bool _dragStarted;
         private void DrawAssetView(Rect rect)
         {
             var contents = _filteredContents;
@@ -381,36 +381,53 @@ namespace AssetShelf
                     && selectedIndex < contents.Count
                     && rect.Contains(Event.current.mousePosition))
                 {
-                    _dragStartAsset = contents[selectedIndex].Asset;
                     _selectedAsset = contents[selectedIndex].Asset;
                     _selectionWithoutPing.Select(_selectedAsset);
+                    _grabbedAsset = contents[selectedIndex].Asset;
                     Repaint();
                     AssetShelfLog.RepaintCallCount++;
                 }
                 else
                 {
-                    _dragStartAsset = null;
+                    _grabbedAsset = null;
                 }
             }
 
             if (Event.current.type == EventType.MouseDrag)
             {
-                var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
-                var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
-                if (selectedIndex >= 0
-                    && selectedIndex < contents.Count
-                    && rect.Contains(Event.current.mousePosition)
-                    && _dragStartAsset != null
-                    && contents[selectedIndex].Asset == _dragStartAsset)
+                if (!_dragStarted)
+                {
+                    var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
+                    var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
+                    if (selectedIndex >= 0
+                        && selectedIndex < contents.Count
+                        && rect.Contains(Event.current.mousePosition)
+                        && _grabbedAsset != null
+                        && contents[selectedIndex].Asset == _grabbedAsset)
+                    {
+                        _dragStarted = true;
+                    }
+                    else
+                    {
+                        _grabbedAsset = null;
+                    }
+                }
+
+                if (_grabbedAsset == null)
+                {
+                    _dragStarted = false;
+                }
+
+                if (_dragStarted && !_selectionWithoutPing.IsRunning)
                 {
                     // Clear drag data
                     DragAndDrop.PrepareStartDrag();
 
                     // Set up drag data
-                    DragAndDrop.objectReferences = new Object[] { _dragStartAsset };
+                    DragAndDrop.objectReferences = new Object[] { _grabbedAsset };
 
                     // Start drag
-                    DragAndDrop.StartDrag($"Dragging Asset: {_dragStartAsset.name}");
+                    DragAndDrop.StartDrag($"Dragging Asset: {_grabbedAsset.name}");
 
                     // Make sure no one uses the event after us
                     Event.current.Use();
