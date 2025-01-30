@@ -372,7 +372,7 @@ namespace AssetShelf
                 AssetShelfGUI.DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex, _selectedAsset);
             }
 
-            // Select and drag
+            // Select in Asset Shelf
             if (Event.current.type == EventType.MouseDown)
             {
                 var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
@@ -382,7 +382,6 @@ namespace AssetShelf
                     && rect.Contains(Event.current.mousePosition))
                 {
                     _selectedAsset = contents[selectedIndex].Asset;
-                    _selectionWithoutPing.Select(_selectedAsset);
                     _grabbedAsset = contents[selectedIndex].Asset;
                     Repaint();
                     AssetShelfLog.RepaintCallCount++;
@@ -393,6 +392,36 @@ namespace AssetShelf
                 }
             }
 
+            // Select in Unity
+            if (Event.current.type == EventType.MouseUp)
+            {
+                var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
+                var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
+                if (selectedIndex >= 0
+                    && selectedIndex < contents.Count
+                    && rect.Contains(Event.current.mousePosition)
+                    && contents[selectedIndex].Asset == _selectedAsset)
+                {
+                    _selectionWithoutPing.Select(_selectedAsset);
+                }
+            }
+
+            // Select in Unity by drop myself
+            if (Event.current.type == EventType.DragUpdated && _grabbedAsset != null)
+            {
+                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+            }
+
+            if (Event.current.type == EventType.DragPerform)
+            {
+                if (DragAndDrop.objectReferences.Length == 1 && DragAndDrop.objectReferences[0] == _grabbedAsset)
+                {
+                    DragAndDrop.AcceptDrag();
+                    _selectionWithoutPing.Select(_selectedAsset);
+                }
+            }
+
+            // Drag and drop
             if (Event.current.type == EventType.MouseDrag)
             {
                 if (!_dragStarted)
@@ -420,6 +449,8 @@ namespace AssetShelf
 
                 if (_dragStarted && !_selectionWithoutPing.IsRunning)
                 {
+                    _dragStarted = false;
+
                     // Clear drag data
                     DragAndDrop.PrepareStartDrag();
 

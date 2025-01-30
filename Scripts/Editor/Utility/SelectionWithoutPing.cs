@@ -14,13 +14,11 @@ namespace AssetShelf
 
         public SelectionWithoutPing()
         {
-            _isRunning = false;
             Selection.selectionChanged += OnSelectionChanged;
         }
 
         public void Dispose()
         {
-            _isRunning = false;
             Selection.selectionChanged -= OnSelectionChanged;
             _lock?.Dispose();
             _lock = null;
