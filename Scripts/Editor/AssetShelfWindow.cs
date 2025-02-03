@@ -69,24 +69,24 @@ namespace AssetShelf
                     _container = AssetDatabase.LoadAssetAtPath<AssetShelfContainer>(AssetDatabase.GUIDToAssetPath(containerGuid));
                     _updateContentsRequired = true;
                 }
+            }
 
-                try
-                {
-                    _previewItemSize = float.Parse(EditorUserSettings.GetConfigValue(PreviewItemSizeUserSettingsKey));
-                }
-                catch (System.Exception)
-                {
-                    _previewItemSize = 100;
-                }
+            try
+            {
+                _previewItemSize = float.Parse(EditorUserSettings.GetConfigValue(PreviewItemSizeUserSettingsKey));
+            }
+            catch (System.Exception)
+            {
+                _previewItemSize = 100;
+            }
 
-                try
-                {
-                    _selectedGroupIndex = int.Parse(EditorUserSettings.GetConfigValue(SelectedGroupIndexUserSettingsKey));
-                }
-                catch (System.Exception)
-                {
-                    _selectedGroupIndex = 0;
-                }
+            try
+            {
+                _selectedGroupIndex = int.Parse(EditorUserSettings.GetConfigValue(SelectedGroupIndexUserSettingsKey));
+            }
+            catch (System.Exception)
+            {
+                _selectedGroupIndex = 0;
             }
 
             if (_treeView == null)
