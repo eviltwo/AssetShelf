@@ -354,12 +354,17 @@ namespace AssetShelf
                 _selectedGroupIndex = 0;
                 _selectedPath = string.Empty;
             }
+
+            if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath)
+            {
+                _assetViewScrollPosition = Vector2.zero;
+                _selectedAsset = null;
+            }
+
             if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath || !_filteredContentsGenerated)
             {
                 EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, _selectedGroupIndex.ToString());
                 _filteredContentsGenerated = true;
-                _assetViewScrollPosition = Vector2.zero;
-                _selectedAsset = null;
                 LoadContentGroupIfNull(_selectedGroupIndex);
                 _filteredContents.Clear();
                 if (!string.IsNullOrEmpty(_selectedPath))
