@@ -5,6 +5,8 @@ namespace AssetShelf
 {
     public static class PreviewCache
     {
+        private static bool _initialized;
+
         private static int[] _ids;
 
         private static float[] _times;
@@ -27,8 +29,10 @@ namespace AssetShelf
             }
         }
 
-        public static void PushTexture(int instanceID, Texture2D previewTex)
+        private static void Initialize()
         {
+            _initialized = true;
+
             if (_rTexs == null)
             {
                 _rTexs = new RenderTexture[_cacheSize];
@@ -42,6 +46,14 @@ namespace AssetShelf
             if (_times == null)
             {
                 _times = new float[_cacheSize];
+            }
+        }
+
+        public static void PushTexture(int instanceID, Texture2D previewTex)
+        {
+            if (!_initialized)
+            {
+                Initialize();
             }
 
             if (!_idPosMap.TryGetValue(instanceID, out var pos))
@@ -112,6 +124,11 @@ namespace AssetShelf
 
         public static void SetCacheSize(int capacity)
         {
+            if (!_initialized)
+            {
+                Initialize();
+            }
+
             var nextSize = GetSquaredSize(capacity);
             if (_cacheSize == nextSize)
             {
