@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 
 namespace AssetShelf
@@ -14,6 +15,12 @@ namespace AssetShelf
 
         private void OnValidate()
         {
+            var isPlaymodeSwitching = EditorApplication.isPlayingOrWillChangePlaymode && !EditorApplication.isPlaying;
+            if (isPlaymodeSwitching)
+            {
+                return;
+            }
+
             PropertyVersion++;
         }
     }
