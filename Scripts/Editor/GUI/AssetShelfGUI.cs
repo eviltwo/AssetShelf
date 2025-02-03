@@ -47,6 +47,7 @@ namespace AssetShelf
 
         private static GUIContent _loadingIcon;
         private static GUIStyle _loadingIconStyle;
+        private static Texture2D _tex;
         public static void DrawGridItem(Rect rect, AssetShelfContent content, bool isSelected)
         {
             if (_loadingIcon == null)
@@ -62,17 +63,37 @@ namespace AssetShelf
                 };
             }
 
-            if (content == null || content.Asset == null || content.Preview == null)
+            if (_tex == null)
+            {
+                _tex = new Texture2D(2, 2);
+            }
+
+            var drawContent = false;
+            if (content != null)
+            {
+                if (content.Preview != null)
+                {
+                    GUI.DrawTexture(rect, content.Preview);
+                    drawContent = true;
+                }
+                else if (content.Asset != null)
+                {
+                    if (PreviewCache.TryGetTexture(content.Asset.GetInstanceID(), _tex))
+                    {
+                        GUI.DrawTexture(rect, _tex);
+                        drawContent = true;
+                    }
+                }
+            }
+
+            if (!drawContent)
             {
                 GUI.Box(rect, _loadingIcon, _loadingIconStyle);
             }
-            else
+
+            if (isSelected)
             {
-                GUI.DrawTexture(rect, content.Preview);
-                if (isSelected)
-                {
-                    HighlightBox(rect);
-                }
+                HighlightBox(rect);
             }
         }
 

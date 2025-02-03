@@ -132,6 +132,8 @@ namespace AssetShelf
             }
 
             _selectionWithoutPing.Dispose();
+
+            PreviewCache.ReleaseResources();
         }
 
         public void AddItemsToMenu(GenericMenu menu)
@@ -276,6 +278,7 @@ namespace AssetShelf
             if (AssetShelfLog.LastDrawPreviewCount * 2 > 128)
             {
                 AssetPreview.SetPreviewTextureCacheSize(AssetShelfLog.LastDrawPreviewCount * 2);
+                PreviewCache.SetCacheSize(AssetShelfLog.LastDrawPreviewCount * 8);
             }
         }
 
