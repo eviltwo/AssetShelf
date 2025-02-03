@@ -20,14 +20,8 @@ namespace AssetShelf
             return columnCount;
         }
 
-        private static GUIContent _loadingIcon;
         public static void DrawGridItems(Rect rect, float itemSize, Vector2 spacing, IReadOnlyList<AssetShelfContent> contents, int start, int end, Object selectedItem)
         {
-            if (_loadingIcon == null)
-            {
-                _loadingIcon = EditorGUIUtility.IconContent("Loading");
-            }
-
             AssetShelfLog.LastDrawPreviewCount = 0;
             var columnCount = GetGridColumnCount(itemSize, spacing.x, rect.width);
             for (int i = start; i < end; i++)
@@ -51,11 +45,26 @@ namespace AssetShelf
             }
         }
 
+        private static GUIContent _loadingIcon;
+        private static GUIStyle _loadingIconStyle;
         public static void DrawGridItem(Rect rect, AssetShelfContent content, bool isSelected)
         {
+            if (_loadingIcon == null)
+            {
+                _loadingIcon = EditorGUIUtility.IconContent("Loading");
+            }
+
+            if (_loadingIconStyle == null)
+            {
+                _loadingIconStyle = new GUIStyle(GUI.skin.box)
+                {
+                    alignment = TextAnchor.MiddleCenter
+                };
+            }
+
             if (content == null || content.Asset == null || content.Preview == null)
             {
-                GUI.Box(rect, _loadingIcon);
+                GUI.Box(rect, _loadingIcon, _loadingIconStyle);
             }
             else
             {
