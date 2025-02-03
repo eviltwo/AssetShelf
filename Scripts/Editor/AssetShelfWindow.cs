@@ -41,8 +41,6 @@ namespace AssetShelf
 
         private List<AssetShelfContent> _filteredContents = new List<AssetShelfContent>();
 
-        private Vector2 _contentGroupScrollPosition;
-
         private Vector2 _assetViewScrollPosition;
 
         private float _previewItemSize = 100;
@@ -71,24 +69,24 @@ namespace AssetShelf
                     _container = AssetDatabase.LoadAssetAtPath<AssetShelfContainer>(AssetDatabase.GUIDToAssetPath(containerGuid));
                     _updateContentsRequired = true;
                 }
+            }
 
-                try
-                {
-                    _previewItemSize = float.Parse(EditorUserSettings.GetConfigValue(PreviewItemSizeUserSettingsKey));
-                }
-                catch (System.Exception)
-                {
-                    _previewItemSize = 100;
-                }
+            try
+            {
+                _previewItemSize = float.Parse(EditorUserSettings.GetConfigValue(PreviewItemSizeUserSettingsKey));
+            }
+            catch (System.Exception)
+            {
+                _previewItemSize = 100;
+            }
 
-                try
-                {
-                    _selectedGroupIndex = int.Parse(EditorUserSettings.GetConfigValue(SelectedGroupIndexUserSettingsKey));
-                }
-                catch (System.Exception)
-                {
-                    _selectedGroupIndex = 0;
-                }
+            try
+            {
+                _selectedGroupIndex = int.Parse(EditorUserSettings.GetConfigValue(SelectedGroupIndexUserSettingsKey));
+            }
+            catch (System.Exception)
+            {
+                _selectedGroupIndex = 0;
             }
 
             if (_treeView == null)
@@ -354,12 +352,17 @@ namespace AssetShelf
                 _selectedGroupIndex = 0;
                 _selectedPath = string.Empty;
             }
+
+            if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath)
+            {
+                _assetViewScrollPosition = Vector2.zero;
+                _selectedAsset = null;
+            }
+
             if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath || !_filteredContentsGenerated)
             {
                 EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, _selectedGroupIndex.ToString());
                 _filteredContentsGenerated = true;
-                _assetViewScrollPosition = Vector2.zero;
-                _selectedAsset = null;
                 LoadContentGroupIfNull(_selectedGroupIndex);
                 _filteredContents.Clear();
                 if (!string.IsNullOrEmpty(_selectedPath))
