@@ -41,8 +41,6 @@ namespace AssetShelf
 
         private List<AssetShelfContent> _filteredContents = new List<AssetShelfContent>();
 
-        private Vector2 _contentGroupScrollPosition;
-
         private Vector2 _assetViewScrollPosition;
 
         private float _previewItemSize = 100;
