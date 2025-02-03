@@ -15,7 +15,7 @@ namespace AssetShelf
 
         private static int _textureSize = 16;
 
-        private static int _cacheSize = 16;
+        private static int _cacheSize = 128;
 
         public static int CacheSize => _cacheSize;
 
