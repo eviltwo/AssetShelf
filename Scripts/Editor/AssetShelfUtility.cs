@@ -57,6 +57,7 @@ namespace AssetShelf
             content.Preview = AssetPreview.GetAssetPreview(content.Asset);
             if (content.Preview != null)
             {
+                PreviewCache.PushTexture(content.Asset.GetInstanceID(), content.Preview);
                 return;
             }
 
