@@ -219,7 +219,7 @@ namespace AssetShelf
                 }
             }
 
-            if (!_treeViewAvailable)
+            if (!_treeViewAvailable && _container != null)
             {
                 _treeView.Setup(_container);
                 _treeView.Reload();
