@@ -187,7 +187,7 @@ namespace AssetShelf
                 AssetShelfLog.RepaintCallCount++;
             }
 
-            _selectionWithoutPing.Update();
+            _selectionWithoutPing?.Update();
         }
 
         public void OnGUI()
@@ -311,7 +311,11 @@ namespace AssetShelf
                     {
                         _updateContentsRequired = true;
                         _selectedAsset = null;
-                        if (_container != null)
+                        if (_container == null)
+                        {
+                            EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, string.Empty);
+                        }
+                        else
                         {
                             var containerGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_container));
                             EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, containerGuid);

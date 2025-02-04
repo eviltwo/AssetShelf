@@ -23,9 +23,13 @@ namespace AssetShelf
 
         public static void ReleaseResources()
         {
-            foreach (var rTex in _rTexs)
+            if (_rTexs != null)
             {
-                rTex?.Release();
+                foreach (var rTex in _rTexs)
+                {
+                    rTex?.Release();
+                }
+                _rTexs = null;
             }
         }
 
