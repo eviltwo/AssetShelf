@@ -22,6 +22,19 @@ namespace AssetShelf
         private static string SelectedGroupIndexUserSettingsKey = "AssetShelfWindow.SelectedGroupIndex";
         private static string TreeViewStateUserSettingsKey = "AssetShelfWindow.TreeViewState";
 
+        private class BuiltinResources
+        {
+            public GUIContent RefreshIcon;
+            public GUIContent PlusIcon;
+            public void Load()
+            {
+                RefreshIcon = EditorGUIUtility.IconContent("d_Refresh");
+                PlusIcon = EditorGUIUtility.IconContent("d_Toolbar Plus");
+            }
+        }
+
+        private BuiltinResources _builtinResources;
+
         private AssetShelfContainerController _controller;
 
         private AssetShelfTreeView _treeView;
@@ -118,6 +131,8 @@ namespace AssetShelf
 
             _selectionWithoutPing = new SelectionWithoutPing();
             _searchField = new SearchField();
+            _builtinResources = new BuiltinResources();
+            _builtinResources.Load();
         }
 
         private void OnDisable()
@@ -291,7 +306,7 @@ namespace AssetShelf
             {
                 using (new EditorGUI.DisabledScope(_controller == null))
                 {
-                    if (GUILayout.Button(EditorGUIUtility.IconContent("d_Refresh"), GUILayout.Width(40)))
+                    if (GUILayout.Button(_builtinResources.RefreshIcon, GUILayout.Width(40)))
                     {
                         _isDataReloadRequired = true;
                         Repaint();
@@ -323,7 +338,7 @@ namespace AssetShelf
                     }
                 }
 
-                if (GUILayout.Button(EditorGUIUtility.IconContent("d_Toolbar Plus"), GUILayout.Width(40)))
+                if (GUILayout.Button(_builtinResources.PlusIcon, GUILayout.Width(40)))
                 {
                     var path = EditorUtility.SaveFilePanelInProject("Create Asset Shelf Settings", "AssetShelfSettings", "asset", "Create a new Asset Shelf Settings.");
                     if (!string.IsNullOrEmpty(path))
