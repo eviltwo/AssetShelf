@@ -4,6 +4,8 @@ namespace AssetShelf
 {
     public class GridView
     {
+        private static float _scrollbarWidth = 15;
+
         private Vector2 _scrollPosition;
 
         public float ScrollPosition
@@ -34,11 +36,10 @@ namespace AssetShelf
 
         public void Draw(Rect rect, int itemCount, Vector2 itemSize, Vector2 spacing, DrawItemCallback onDrawItem)
         {
-            const float scrollbarWidth = 15;
-            var columnCount = CalculateColumnCount(itemSize.x, spacing.x, rect.width - scrollbarWidth);
+            var columnCount = CalculateColumnCount(itemSize.x, spacing.x, rect.width - _scrollbarWidth);
             var rowCount = Mathf.CeilToInt(itemCount / (float)columnCount);
             var contentsHeight = rowCount * (itemSize.y + spacing.y) - spacing.y;
-            var contentsRect = new Rect(0, 0, rect.width - scrollbarWidth, contentsHeight);
+            var contentsRect = new Rect(0, 0, rect.width - _scrollbarWidth, contentsHeight);
             using (var scrollView = new GUI.ScrollViewScope(rect, _scrollPosition, contentsRect))
             {
                 _scrollPosition = scrollView.scrollPosition;
@@ -82,7 +83,7 @@ namespace AssetShelf
                 return -1;
             }
 
-            var columnCount = CalculateColumnCount(LastDrawItemSize.x, LastDrawSpacing.x, LastDrawRect.width);
+            var columnCount = CalculateColumnCount(LastDrawItemSize.x, LastDrawSpacing.x, LastDrawRect.width - _scrollbarWidth);
             var row = Mathf.FloorToInt((position.y - LastDrawRect.y + LastDrawScrollPosition.y) / (LastDrawItemSize.y + LastDrawSpacing.y));
             var column = Mathf.FloorToInt((position.x - LastDrawRect.x) / (LastDrawItemSize.x + LastDrawSpacing.x));
             if (column >= columnCount)
