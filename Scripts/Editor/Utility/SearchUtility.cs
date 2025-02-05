@@ -14,7 +14,19 @@ namespace AssetShelf
                 return false;
             }
 
-            return target.ToLower().Contains(search.ToLower());
+            search = search.ToLower();
+            target = target.ToLower();
+
+            var splited = search.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+            foreach (var s in splited)
+            {
+                if (!target.Contains(s))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }
