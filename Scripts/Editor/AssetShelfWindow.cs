@@ -563,11 +563,6 @@ namespace AssetShelf
             }
         }
 
-        private void DrawGridView()
-        {
-
-        }
-
         private void DrawFooterLayout()
         {
             using (new GUILayout.HorizontalScope())
