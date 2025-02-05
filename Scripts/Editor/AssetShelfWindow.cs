@@ -139,6 +139,14 @@ namespace AssetShelf
         public void AddItemsToMenu(GenericMenu menu)
         {
             menu.AddItem(new GUIContent("Show Debug View"), _showDebugView, () => _showDebugView = !_showDebugView);
+            menu.AddItem(new GUIContent("Reset User Data"), false, () =>
+            {
+                EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, string.Empty);
+                EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, string.Empty);
+                EditorUserSettings.SetConfigValue(PreviewItemSizeUserSettingsKey, string.Empty);
+                EditorUserSettings.SetConfigValue(TreeViewStateUserSettingsKey, string.Empty);
+                Close();
+            });
         }
 
         private void OnObjectChangesPublished(ref ObjectChangeEventStream stream)
@@ -311,11 +319,7 @@ namespace AssetShelf
                     {
                         _updateContentsRequired = true;
                         _selectedAsset = null;
-                        if (_container == null)
-                        {
-                            EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, string.Empty);
-                        }
-                        else
+                        if (_container != null)
                         {
                             var containerGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_container));
                             EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, containerGuid);
