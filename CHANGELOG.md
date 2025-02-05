@@ -1,6 +1,10 @@
 # Changelog
 
-## [0.5.4] - Development
+## [0.6.0] - Development
+### Added
+- Added search field.
+
+## [0.5.4] - 2025-02-04
 ### Added
 - Open inspector for selected object.
 - Added a create button.
