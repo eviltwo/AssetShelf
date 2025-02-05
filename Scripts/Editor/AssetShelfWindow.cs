@@ -59,13 +59,13 @@ namespace AssetShelf
 
         private List<AssetShelfContent> _filteredContents = new List<AssetShelfContent>();
 
-        private Vector2 _assetViewScrollPosition;
-
         private float _previewItemSize = 100;
 
         private bool _isLoadingPreviews;
         private int _loadingStart;
         private int _loadingEnd;
+
+        private GridView _gridView;
 
         private bool _showDebugView;
 
@@ -129,6 +129,7 @@ namespace AssetShelf
                 _selectedGroupIndex = 0;
             }
 
+            _gridView = new GridView();
             _selectionWithoutPing = new SelectionWithoutPing();
             _searchField = new SearchField();
             _builtinResources = new BuiltinResources();
@@ -378,7 +379,7 @@ namespace AssetShelf
 
             if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath)
             {
-                _assetViewScrollPosition = Vector2.zero;
+                _gridView.ScrollPosition = 0;
             }
 
             if (oldSelectedGroupIndex != _selectedGroupIndex
@@ -447,36 +448,18 @@ namespace AssetShelf
             var contents = _filteredContents;
             var itemSize = _previewItemSize;
             var spacing = new Vector2(5, 5);
-            var scrollbarWidth = 15;
 
             // Draw grid view
             var gridViewRect = new Rect(rect.x, rect.y + headerHeight, rect.width, rect.height - headerHeight);
-            var contentsHeight = AssetShelfGUI.GetGridViewHeight(itemSize, spacing, rect.width - scrollbarWidth, contents.Count);
-            var contentsRect = new Rect(0, 0, rect.width - scrollbarWidth, contentsHeight);
-            using (var scrollView = new GUI.ScrollViewScope(gridViewRect, _assetViewScrollPosition, contentsRect))
-            {
-                _assetViewScrollPosition = scrollView.scrollPosition;
-                var columnCount = AssetShelfGUI.GetGridColumnCount(itemSize, spacing.x, contentsRect.width);
-                var startRow = Mathf.FloorToInt(_assetViewScrollPosition.y / (itemSize + spacing.y));
-                var startIndex = startRow * columnCount;
-                var endRow = Mathf.CeilToInt((_assetViewScrollPosition.y + gridViewRect.height) / (itemSize + spacing.y));
-                var endIndex = endRow * columnCount;
-                endIndex = Mathf.Min(endIndex, contents.Count);
-                AssetShelfUtility.LoadPreviewsIfNeeded(contents, startIndex, endIndex);
-                _isLoadingPreviews = contents.Skip(startIndex).Take(endIndex - startIndex).Any(c => c.Preview == null);
-                _loadingStart = startIndex;
-                _loadingEnd = endIndex;
-                AssetShelfGUI.DrawGridItems(contentsRect, itemSize, spacing, contents, startIndex, endIndex, _selectedAsset);
-            }
+            _gridView.Draw(gridViewRect, contents.Count, new Vector2(itemSize, itemSize), spacing, OnDrawGridItem);
+            _loadingStart = _gridView.LastDrawResultResultIndex;
+            _loadingEnd = _gridView.LastDrawResultResultIndex + _gridView.LastDrawResultItemCount - 1;
 
             // Select in Asset Shelf
             if (Event.current.type == EventType.MouseDown)
             {
-                var gridViewMousePosition = Event.current.mousePosition - gridViewRect.position + _assetViewScrollPosition;
-                var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, contentsRect, gridViewMousePosition);
-                if (selectedIndex >= 0
-                    && selectedIndex < contents.Count
-                    && gridViewRect.Contains(Event.current.mousePosition))
+                var selectedIndex = _gridView.GetIndexInLastLayout(Event.current.mousePosition);
+                if (selectedIndex >= 0)
                 {
                     _selectedAsset = contents[selectedIndex].Asset;
                     _grabbedAsset = contents[selectedIndex].Asset;
@@ -492,12 +475,8 @@ namespace AssetShelf
             // Select in Unity
             if (Event.current.type == EventType.MouseUp)
             {
-                var gridViewMousePosition = Event.current.mousePosition - gridViewRect.position + _assetViewScrollPosition;
-                var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, contentsRect, gridViewMousePosition);
-                if (selectedIndex >= 0
-                    && selectedIndex < contents.Count
-                    && gridViewRect.Contains(Event.current.mousePosition)
-                    && contents[selectedIndex].Asset == _selectedAsset)
+                var selectedIndex = _gridView.GetIndexInLastLayout(Event.current.mousePosition);
+                if (selectedIndex >= 0 && contents[selectedIndex].Asset == _selectedAsset)
                 {
                     _selectionWithoutPing.Select(_selectedAsset);
                 }
@@ -523,13 +502,8 @@ namespace AssetShelf
             {
                 if (!_dragStarted)
                 {
-                    var gridViewMousePosition = Event.current.mousePosition - gridViewRect.position + _assetViewScrollPosition;
-                    var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, contentsRect, gridViewMousePosition);
-                    if (selectedIndex >= 0
-                        && selectedIndex < contents.Count
-                        && gridViewRect.Contains(Event.current.mousePosition)
-                        && _grabbedAsset != null
-                        && contents[selectedIndex].Asset == _grabbedAsset)
+                    var selectedIndex = _gridView.GetIndexInLastLayout(Event.current.mousePosition);
+                    if (selectedIndex >= 0 && _grabbedAsset != null && contents[selectedIndex].Asset == _grabbedAsset)
                     {
                         _dragStarted = true;
                     }
@@ -560,6 +534,18 @@ namespace AssetShelf
                     // Make sure no one uses the event after us
                     Event.current.Use();
                 }
+            }
+        }
+
+        private void OnDrawGridItem(Rect rect, int index)
+        {
+            if (Event.current.type == EventType.Repaint)
+            {
+                AssetShelfLog.LastDrawPreviewCount++;
+                var content = _filteredContents[index];
+                AssetShelfUtility.LoadPreviewIfNeeded(content);
+                _isLoadingPreviews |= content.Preview == null;
+                AssetShelfGUI.DrawGridItem(rect, content, content?.Asset == _selectedAsset);
             }
         }
 
