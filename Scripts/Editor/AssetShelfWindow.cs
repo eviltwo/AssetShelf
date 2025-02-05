@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
@@ -33,7 +34,13 @@ namespace AssetShelf
 
         private int _selectedGroupIndex = 0;
 
-        private string _selectedPath = "";
+        private string _selectedPath = string.Empty;
+
+        private SearchField _searchField;
+
+        private string _searchText = string.Empty;
+
+        private string _searchTextFilterUsed = string.Empty;
 
         private bool _filteredContentsGenerated;
 
@@ -110,6 +117,7 @@ namespace AssetShelf
             }
 
             _selectionWithoutPing = new SelectionWithoutPing();
+            _searchField = new SearchField();
         }
 
         private void OnDisable()
@@ -222,11 +230,10 @@ namespace AssetShelf
                 _filteredContents.Clear();
             }
 
-            const float singleLineHeight = 18;
-            const float headerHeight = singleLineHeight * 1 + 4;
-            const float sidebarWidth = 200;
-            const float debugViewHeight = singleLineHeight * 4;
-            const float footerHeight = singleLineHeight * 1;
+            var headerHeight = EditorGUIUtility.singleLineHeight * 1 + 4;
+            var sidebarWidth = 200;
+            var debugViewHeight = EditorGUIUtility.singleLineHeight * 4;
+            var footerHeight = EditorGUIUtility.singleLineHeight * 1;
 
             // Header
             var headerRect = new Rect(0, 0, position.width, headerHeight);
@@ -357,10 +364,11 @@ namespace AssetShelf
             if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath)
             {
                 _assetViewScrollPosition = Vector2.zero;
-                _selectedAsset = null;
             }
 
-            if (oldSelectedGroupIndex != _selectedGroupIndex || oldSelectedPath != _selectedPath || !_filteredContentsGenerated)
+            if (oldSelectedGroupIndex != _selectedGroupIndex
+                || oldSelectedPath != _selectedPath || !_filteredContentsGenerated
+                || _searchTextFilterUsed != _searchText)
             {
                 EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, _selectedGroupIndex.ToString());
                 _filteredContentsGenerated = true;
@@ -368,13 +376,24 @@ namespace AssetShelf
                 var selectedGroup = _controller.GetContentGroup(_selectedGroupIndex);
                 if (!string.IsNullOrEmpty(_selectedPath))
                 {
-
-                    _filteredContents.AddRange(selectedGroup.Contents.Where(c => AssetShelfUtility.HasDirectory(c.Path, _selectedPath)));
+                    var filter = selectedGroup.Contents
+                        .Where(c => AssetShelfUtility.HasDirectory(c.Path, _selectedPath))
+                        .Where(c => SearchUtility.IsMatched(_searchText, Path.GetFileNameWithoutExtension(c.Path)));
+                    _filteredContents.AddRange(filter);
                 }
                 else
                 {
-                    _filteredContents.AddRange(selectedGroup.Contents);
+                    var filter = selectedGroup.Contents
+                        .Where(c => SearchUtility.IsMatched(_searchText, Path.GetFileNameWithoutExtension(c.Path)));
+                    _filteredContents.AddRange(filter);
                 }
+
+                if (_selectedAsset != null && !_filteredContents.Exists(v => v.Asset == _selectedAsset))
+                {
+                    _selectedAsset = null;
+                }
+
+                _searchTextFilterUsed = _searchText;
             }
         }
 
@@ -398,38 +417,51 @@ namespace AssetShelf
                 return;
             }
 
+            // Search bar
+            var headerHeight = EditorGUIUtility.singleLineHeight * 1;
+            var headerRect = new Rect(rect.x, rect.y, rect.width, headerHeight);
+            GUI.Box(headerRect, GUIContent.none);
+            using (new GUILayout.AreaScope(headerRect))
+            using (new GUILayout.HorizontalScope())
+            {
+                GUILayout.FlexibleSpace();
+                var searchRect = GUILayoutUtility.GetRect(100, EditorGUIUtility.singleLineHeight, GUILayout.MaxWidth(300));
+                _searchText = _searchField.OnGUI(searchRect, _searchText);
+            }
+
             var contents = _filteredContents;
             var itemSize = _previewItemSize;
             var spacing = new Vector2(5, 5);
             var scrollbarWidth = 15;
 
             // Draw grid view
-            var viewHeight = AssetShelfGUI.GetGridViewHeight(itemSize, spacing, rect.width - scrollbarWidth, contents.Count);
-            var viewRect = new Rect(0, 0, rect.width - scrollbarWidth, viewHeight);
-            using (var scrollView = new GUI.ScrollViewScope(rect, _assetViewScrollPosition, viewRect))
+            var gridViewRect = new Rect(rect.x, rect.y + headerHeight, rect.width, rect.height - headerHeight);
+            var contentsHeight = AssetShelfGUI.GetGridViewHeight(itemSize, spacing, rect.width - scrollbarWidth, contents.Count);
+            var contentsRect = new Rect(0, 0, rect.width - scrollbarWidth, contentsHeight);
+            using (var scrollView = new GUI.ScrollViewScope(gridViewRect, _assetViewScrollPosition, contentsRect))
             {
                 _assetViewScrollPosition = scrollView.scrollPosition;
-                var columnCount = AssetShelfGUI.GetGridColumnCount(itemSize, spacing.x, viewRect.width);
+                var columnCount = AssetShelfGUI.GetGridColumnCount(itemSize, spacing.x, contentsRect.width);
                 var startRow = Mathf.FloorToInt(_assetViewScrollPosition.y / (itemSize + spacing.y));
                 var startIndex = startRow * columnCount;
-                var endRow = Mathf.CeilToInt((_assetViewScrollPosition.y + rect.height) / (itemSize + spacing.y));
+                var endRow = Mathf.CeilToInt((_assetViewScrollPosition.y + gridViewRect.height) / (itemSize + spacing.y));
                 var endIndex = endRow * columnCount;
                 endIndex = Mathf.Min(endIndex, contents.Count);
                 AssetShelfUtility.LoadPreviewsIfNeeded(contents, startIndex, endIndex);
                 _isLoadingPreviews = contents.Skip(startIndex).Take(endIndex - startIndex).Any(c => c.Preview == null);
                 _loadingStart = startIndex;
                 _loadingEnd = endIndex;
-                AssetShelfGUI.DrawGridItems(viewRect, itemSize, spacing, contents, startIndex, endIndex, _selectedAsset);
+                AssetShelfGUI.DrawGridItems(contentsRect, itemSize, spacing, contents, startIndex, endIndex, _selectedAsset);
             }
 
             // Select in Asset Shelf
             if (Event.current.type == EventType.MouseDown)
             {
-                var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
-                var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
+                var gridViewMousePosition = Event.current.mousePosition - gridViewRect.position + _assetViewScrollPosition;
+                var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, contentsRect, gridViewMousePosition);
                 if (selectedIndex >= 0
                     && selectedIndex < contents.Count
-                    && rect.Contains(Event.current.mousePosition))
+                    && gridViewRect.Contains(Event.current.mousePosition))
                 {
                     _selectedAsset = contents[selectedIndex].Asset;
                     _grabbedAsset = contents[selectedIndex].Asset;
@@ -445,11 +477,11 @@ namespace AssetShelf
             // Select in Unity
             if (Event.current.type == EventType.MouseUp)
             {
-                var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
-                var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
+                var gridViewMousePosition = Event.current.mousePosition - gridViewRect.position + _assetViewScrollPosition;
+                var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, contentsRect, gridViewMousePosition);
                 if (selectedIndex >= 0
                     && selectedIndex < contents.Count
-                    && rect.Contains(Event.current.mousePosition)
+                    && gridViewRect.Contains(Event.current.mousePosition)
                     && contents[selectedIndex].Asset == _selectedAsset)
                 {
                     _selectionWithoutPing.Select(_selectedAsset);
@@ -476,11 +508,11 @@ namespace AssetShelf
             {
                 if (!_dragStarted)
                 {
-                    var gridViewMousePosition = Event.current.mousePosition - rect.position + _assetViewScrollPosition;
-                    var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, viewRect, gridViewMousePosition);
+                    var gridViewMousePosition = Event.current.mousePosition - gridViewRect.position + _assetViewScrollPosition;
+                    var selectedIndex = AssetShelfGUI.GetIndexInGridView(itemSize, spacing, contentsRect, gridViewMousePosition);
                     if (selectedIndex >= 0
                         && selectedIndex < contents.Count
-                        && rect.Contains(Event.current.mousePosition)
+                        && gridViewRect.Contains(Event.current.mousePosition)
                         && _grabbedAsset != null
                         && contents[selectedIndex].Asset == _grabbedAsset)
                     {
@@ -514,6 +546,11 @@ namespace AssetShelf
                     Event.current.Use();
                 }
             }
+        }
+
+        private void DrawGridView()
+        {
+
         }
 
         private void DrawFooterLayout()
