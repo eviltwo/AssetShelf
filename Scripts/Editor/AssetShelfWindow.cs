@@ -62,8 +62,6 @@ namespace AssetShelf
         private float _previewItemSize = 100;
 
         private bool _isLoadingPreviews;
-        private int _loadingStart;
-        private int _loadingEnd;
 
         private GridView _gridView;
 
@@ -198,11 +196,18 @@ namespace AssetShelf
 
         private void Update()
         {
-            if (_isLoadingPreviews)
+            // Check end of loading previews
+            if (_isLoadingPreviews && _gridView != null)
             {
                 var hasLoading = false;
-                for (int i = _loadingStart; i < _loadingEnd && i < _filteredContents.Count; i++)
+                for (int i = 0; i < _gridView.LastDrawResultItemCount; i++)
                 {
+                    var itemIndex = _gridView.LastDrawResultResultIndex + i;
+                    if (itemIndex < 0 || itemIndex >= _filteredContents.Count)
+                    {
+                        continue;
+                    }
+
                     var content = _filteredContents[i];
                     if (content != null && content.Asset != null && AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
                     {
@@ -218,6 +223,7 @@ namespace AssetShelf
                 }
             }
 
+            // Reset loading count and repaint
             if (AssetShelfContent.IsLimitted)
             {
                 Repaint();
@@ -225,6 +231,7 @@ namespace AssetShelf
             }
             AssetShelfContent.ResetLoadAssetCount();
 
+            // Selection
             _selectionWithoutPing?.Update();
         }
 
@@ -452,8 +459,6 @@ namespace AssetShelf
             // Draw grid view
             var gridViewRect = new Rect(rect.x, rect.y + headerHeight, rect.width, rect.height - headerHeight);
             _gridView.Draw(gridViewRect, contents.Count, new Vector2(itemSize, itemSize), spacing, OnDrawGridItem);
-            _loadingStart = _gridView.LastDrawResultResultIndex;
-            _loadingEnd = _gridView.LastDrawResultResultIndex + _gridView.LastDrawResultItemCount - 1;
 
             // Select in Asset Shelf
             if (Event.current.type == EventType.MouseDown)
