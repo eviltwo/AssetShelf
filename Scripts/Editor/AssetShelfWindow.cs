@@ -58,6 +58,8 @@ namespace AssetShelf
 
         private SelectionWithoutPing _selectionWithoutPing;
 
+        private bool _resetUserDataAndClose;
+
         private void OnEnable()
         {
             ObjectChangeEvents.changesPublished += OnObjectChangesPublished;
@@ -94,13 +96,18 @@ namespace AssetShelf
                 try
                 {
                     var json = EditorUserSettings.GetConfigValue(TreeViewStateUserSettingsKey);
-                    if (!string.IsNullOrEmpty(json))
+                    if (string.IsNullOrEmpty(json))
+                    {
+                        _treeViewState = new TreeViewState();
+                    }
+                    else
                     {
                         _treeViewState = JsonUtility.FromJson<TreeViewState>(json);
                     }
                 }
                 catch (System.Exception)
                 {
+
                     _treeViewState = new TreeViewState();
                 }
 
@@ -118,7 +125,7 @@ namespace AssetShelf
         private void OnDisable()
         {
             ObjectChangeEvents.changesPublished -= OnObjectChangesPublished;
-            if (_treeViewState != null)
+            if (_treeViewState != null && !_resetUserDataAndClose)
             {
                 try
                 {
@@ -139,6 +146,15 @@ namespace AssetShelf
         public void AddItemsToMenu(GenericMenu menu)
         {
             menu.AddItem(new GUIContent("Show Debug View"), _showDebugView, () => _showDebugView = !_showDebugView);
+            menu.AddItem(new GUIContent("Reset User Data"), false, () =>
+            {
+                EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, null);
+                EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, null);
+                EditorUserSettings.SetConfigValue(PreviewItemSizeUserSettingsKey, null);
+                EditorUserSettings.SetConfigValue(TreeViewStateUserSettingsKey, null);
+                _resetUserDataAndClose = true;
+                Close();
+            });
         }
 
         private void OnObjectChangesPublished(ref ObjectChangeEventStream stream)
@@ -311,11 +327,7 @@ namespace AssetShelf
                     {
                         _updateContentsRequired = true;
                         _selectedAsset = null;
-                        if (_container == null)
-                        {
-                            EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, string.Empty);
-                        }
-                        else
+                        if (_container != null)
                         {
                             var containerGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_container));
                             EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, containerGuid);
