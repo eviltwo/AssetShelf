@@ -74,9 +74,10 @@ namespace AssetShelf
                 _rTexs[pos] = new RenderTexture(_textureSize, _textureSize, 0, RenderTextureFormat.ARGB32);
             }
 
+            var tempRT = RenderTexture.active;
             RenderTexture.active = _rTexs[pos];
             Graphics.Blit(previewTex, _rTexs[pos]);
-            RenderTexture.active = null;
+            RenderTexture.active = tempRT;
             _times[pos] = Time.realtimeSinceStartup;
         }
 
