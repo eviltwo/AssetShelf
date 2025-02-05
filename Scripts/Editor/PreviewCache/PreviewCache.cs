@@ -23,6 +23,7 @@ namespace AssetShelf
 
         public static void ReleaseResources()
         {
+            _initialized = false;
             if (_rTexs != null)
             {
                 foreach (var rTex in _rTexs)
