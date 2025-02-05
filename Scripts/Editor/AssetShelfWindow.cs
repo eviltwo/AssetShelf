@@ -194,12 +194,12 @@ namespace AssetShelf
                 }
             }
 
-            AssetShelfContent.ResetLoadAssetCount();
             if (AssetShelfContent.IsLimitted)
             {
                 Repaint();
                 AssetShelfLog.RepaintCallCount++;
             }
+            AssetShelfContent.ResetLoadAssetCount();
 
             _selectionWithoutPing?.Update();
         }
