@@ -42,22 +42,30 @@ namespace AssetShelf
             using (var scrollView = new GUI.ScrollViewScope(rect, _scrollPosition, contentsRect))
             {
                 _scrollPosition = scrollView.scrollPosition;
-                var startRow = Mathf.FloorToInt(_scrollPosition.y / (itemSize.y + spacing.y));
-                var startIndex = Mathf.Min(startRow * columnCount, itemCount - 1);
-                var endRow = Mathf.CeilToInt((_scrollPosition.y + rect.height) / (itemSize.y + spacing.y));
-                var endIndex = Mathf.Min(endRow * columnCount, itemCount - 1);
-                for (var i = startIndex; i <= endIndex; i++)
+                if (itemCount > 0)
                 {
-                    var itemRect = new Rect(
-                        (i % columnCount) * (itemSize.x + spacing.x),
-                        (i / columnCount) * (itemSize.y + spacing.y),
-                        itemSize.x,
-                        itemSize.y);
-                    onDrawItem(itemRect, i);
-                }
+                    var startRow = Mathf.FloorToInt(_scrollPosition.y / (itemSize.y + spacing.y));
+                    var startIndex = Mathf.Min(startRow * columnCount, itemCount - 1);
+                    var endRow = Mathf.CeilToInt((_scrollPosition.y + rect.height) / (itemSize.y + spacing.y));
+                    var endIndex = Mathf.Min(endRow * columnCount, itemCount - 1);
+                    for (var i = startIndex; i <= endIndex; i++)
+                    {
+                        var itemRect = new Rect(
+                            (i % columnCount) * (itemSize.x + spacing.x),
+                            (i / columnCount) * (itemSize.y + spacing.y),
+                            itemSize.x,
+                            itemSize.y);
+                        onDrawItem(itemRect, i);
+                    }
 
-                LastDrawResultResultIndex = startIndex;
-                LastDrawResultItemCount = endIndex - startIndex;
+                    LastDrawResultResultIndex = startIndex;
+                    LastDrawResultItemCount = endIndex - startIndex;
+                }
+                else
+                {
+                    LastDrawResultResultIndex = -1;
+                    LastDrawResultItemCount = 0;
+                }
             }
 
             LastDrawRect = rect;
