@@ -17,21 +17,19 @@ namespace AssetShelf
         }
 
         private static string ContainerGuidUserSettingsKey = "AssetShelfWindow.Container";
-        private static string SelectedGroupIndexUserSettingsKey = "AssetShelfWindow.SelectedGroupIndex";
         private static string PreviewItemSizeUserSettingsKey = "AssetShelfWindow.PreviewItemSize";
+        private static string SelectedGroupIndexUserSettingsKey = "AssetShelfWindow.SelectedGroupIndex";
         private static string TreeViewStateUserSettingsKey = "AssetShelfWindow.TreeViewState";
 
-        private AssetShelfContainer _container;
+        private AssetShelfContainerController _controller;
 
-        private int _contentGroupCount;
+        private AssetShelfTreeView _treeView;
 
-        private string[] _contentGroupNames = new string[0];
+        private TreeViewState _treeViewState;
 
-        private AssetShelfContentGroup[] _contentGroups = new AssetShelfContentGroup[0];
+        private bool _isTreeViewInitialized;
 
-        private AssetShelfContentDirectoryAnalyzer[] _directoryAnalyzers = new AssetShelfContentDirectoryAnalyzer[0];
-
-        private bool _updateContentsRequired;
+        private bool _isDataReloadRequired;
 
         private int _selectedGroupIndex = 0;
 
@@ -51,11 +49,6 @@ namespace AssetShelf
 
         private bool _showDebugView;
 
-        private TreeViewState _treeViewState;
-
-        private AssetShelfTreeView _treeView;
-        private bool _treeViewAvailable;
-
         private SelectionWithoutPing _selectionWithoutPing;
 
         private bool _resetUserDataAndClose;
@@ -63,16 +56,40 @@ namespace AssetShelf
         private void OnEnable()
         {
             ObjectChangeEvents.changesPublished += OnObjectChangesPublished;
-            if (_container == null)
+
+            // TreeView
+            try
             {
-                var containerGuid = EditorUserSettings.GetConfigValue(ContainerGuidUserSettingsKey);
-                if (!string.IsNullOrEmpty(containerGuid))
+                var json = EditorUserSettings.GetConfigValue(TreeViewStateUserSettingsKey);
+                if (string.IsNullOrEmpty(json))
                 {
-                    _container = AssetDatabase.LoadAssetAtPath<AssetShelfContainer>(AssetDatabase.GUIDToAssetPath(containerGuid));
-                    _updateContentsRequired = true;
+                    _treeViewState = new TreeViewState();
+                }
+                else
+                {
+                    _treeViewState = JsonUtility.FromJson<TreeViewState>(json);
+                }
+            }
+            catch (System.Exception)
+            {
+                _treeViewState = new TreeViewState();
+            }
+
+            _treeView = new AssetShelfTreeView(_treeViewState);
+
+            // Controller
+            var containerGuid = EditorUserSettings.GetConfigValue(ContainerGuidUserSettingsKey);
+            if (!string.IsNullOrEmpty(containerGuid))
+            {
+                var container = AssetDatabase.LoadAssetAtPath<AssetShelfContainer>(AssetDatabase.GUIDToAssetPath(containerGuid));
+                if (container != null)
+                {
+                    _controller = new AssetShelfContainerController(container);
+                    _isDataReloadRequired = true;
                 }
             }
 
+            // Preview item size
             try
             {
                 _previewItemSize = float.Parse(EditorUserSettings.GetConfigValue(PreviewItemSizeUserSettingsKey));
@@ -82,6 +99,7 @@ namespace AssetShelf
                 _previewItemSize = 100;
             }
 
+            // Selection
             try
             {
                 _selectedGroupIndex = int.Parse(EditorUserSettings.GetConfigValue(SelectedGroupIndexUserSettingsKey));
@@ -91,40 +109,11 @@ namespace AssetShelf
                 _selectedGroupIndex = 0;
             }
 
-            if (_treeView == null)
-            {
-                try
-                {
-                    var json = EditorUserSettings.GetConfigValue(TreeViewStateUserSettingsKey);
-                    if (string.IsNullOrEmpty(json))
-                    {
-                        _treeViewState = new TreeViewState();
-                    }
-                    else
-                    {
-                        _treeViewState = JsonUtility.FromJson<TreeViewState>(json);
-                    }
-                }
-                catch (System.Exception)
-                {
-
-                    _treeViewState = new TreeViewState();
-                }
-
-                _treeView = new AssetShelfTreeView(_treeViewState);
-                _treeViewAvailable = false;
-                _updateContentsRequired = true;
-            }
-
-            if (_selectionWithoutPing == null)
-            {
-                _selectionWithoutPing = new SelectionWithoutPing();
-            }
+            _selectionWithoutPing = new SelectionWithoutPing();
         }
 
         private void OnDisable()
         {
-            ObjectChangeEvents.changesPublished -= OnObjectChangesPublished;
             if (_treeViewState != null && !_resetUserDataAndClose)
             {
                 try
@@ -138,8 +127,12 @@ namespace AssetShelf
                 }
             }
 
+            ObjectChangeEvents.changesPublished -= OnObjectChangesPublished;
+            _controller = null;
+            _isTreeViewInitialized = false;
+            _treeView = null;
+            _treeViewState = null;
             _selectionWithoutPing.Dispose();
-
             PreviewCache.ReleaseResources();
         }
 
@@ -159,15 +152,20 @@ namespace AssetShelf
 
         private void OnObjectChangesPublished(ref ObjectChangeEventStream stream)
         {
+            if (_controller == null)
+            {
+                return;
+            }
+
             ChangeAssetObjectPropertiesEventArgs data;
             for (int i = 0; i < stream.length; i++)
             {
                 if (stream.GetEventType(i) == ObjectChangeKind.ChangeAssetObjectProperties)
                 {
                     stream.GetChangeAssetObjectPropertiesEvent(i, out data);
-                    if (data.instanceId == _container.GetInstanceID())
+                    if (data.instanceId == _controller.ContainerInstanceID)
                     {
-                        _updateContentsRequired = true;
+                        _isDataReloadRequired = true;
                         break;
                     }
                 }
@@ -208,38 +206,20 @@ namespace AssetShelf
 
         public void OnGUI()
         {
-            if (_updateContentsRequired)
+            if (_isDataReloadRequired)
             {
-                _updateContentsRequired = false;
+                _isDataReloadRequired = false;
+
+                if (_controller != null)
+                {
+                    _controller.Initialize();
+                    _treeView.Setup(_controller.Container);
+                    _treeView.Reload();
+                    _isTreeViewInitialized = true;
+                }
+
                 _filteredContentsGenerated = false;
                 _filteredContents.Clear();
-                if (_container == null)
-                {
-                    _contentGroupCount = 0;
-                    _contentGroupNames = new string[0];
-                    _contentGroups = new AssetShelfContentGroup[0];
-                    _directoryAnalyzers = new AssetShelfContentDirectoryAnalyzer[0];
-                    _treeViewAvailable = false;
-                }
-                else
-                {
-                    _contentGroupCount = _container.GetContentGroupCount();
-                    _contentGroupNames = new string[_contentGroupCount];
-                    _directoryAnalyzers = new AssetShelfContentDirectoryAnalyzer[_contentGroupCount];
-                    for (int i = 0; i < _contentGroupCount; i++)
-                    {
-                        _contentGroupNames[i] = _container.GetContentGroupName(i);
-                    }
-                    _contentGroups = new AssetShelfContentGroup[_contentGroupCount];
-                    _treeViewAvailable = false;
-                }
-            }
-
-            if (!_treeViewAvailable && _container != null)
-            {
-                _treeView.Setup(_container);
-                _treeView.Reload();
-                _treeViewAvailable = true;
             }
 
             const float singleLineHeight = 18;
@@ -298,23 +278,15 @@ namespace AssetShelf
             }
         }
 
-        private void LoadContentGroupIfNull(int index)
-        {
-            if (_contentGroups[index] == null)
-            {
-                _contentGroups[index] = _container.GetContentGroupWithoutPreview(index);
-            }
-        }
-
         private void DrawHeaderLayout()
         {
             using (new GUILayout.HorizontalScope())
             {
-                if (_container != null)
+                using (new EditorGUI.DisabledScope(_controller == null))
                 {
                     if (GUILayout.Button(EditorGUIUtility.IconContent("d_Refresh"), GUILayout.Width(40)))
                     {
-                        _updateContentsRequired = true;
+                        _isDataReloadRequired = true;
                         Repaint();
                         AssetShelfLog.RepaintCallCount++;
                     }
@@ -322,16 +294,23 @@ namespace AssetShelf
 
                 using (var changeCheck = new EditorGUI.ChangeCheckScope())
                 {
-                    _container = EditorGUILayout.ObjectField(_container, typeof(AssetShelfContainer), false) as AssetShelfContainer;
+                    var container = EditorGUILayout.ObjectField(_controller?.Container, typeof(AssetShelfContainer), false) as AssetShelfContainer;
                     if (changeCheck.changed)
                     {
-                        _updateContentsRequired = true;
                         _selectedAsset = null;
-                        if (_container != null)
+                        if (container == null)
                         {
-                            var containerGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_container));
-                            EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, containerGuid);
+                            _controller = null;
                         }
+                        else
+                        {
+                            _controller = new AssetShelfContainerController(container);
+                            var containerGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(container));
+                            EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, containerGuid);
+                            _isDataReloadRequired = true;
+                            _isTreeViewInitialized = false;
+                        }
+
                         Repaint();
                         AssetShelfLog.RepaintCallCount++;
                     }
@@ -342,11 +321,14 @@ namespace AssetShelf
                     var path = EditorUtility.SaveFilePanelInProject("Create Asset Shelf Settings", "AssetShelfSettings", "asset", "Create a new Asset Shelf Settings.");
                     if (!string.IsNullOrEmpty(path))
                     {
-                        _container = CreateInstance<AssetShelfSettings>();
-                        AssetDatabase.CreateAsset(_container, path);
-                        var containerGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_container));
+                        var container = CreateInstance<AssetShelfSettings>();
+                        AssetDatabase.CreateAsset(container, path);
+                        _controller = new AssetShelfContainerController(container);
+                        var containerGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(container));
                         EditorUserSettings.SetConfigValue(ContainerGuidUserSettingsKey, containerGuid);
-                        _updateContentsRequired = true;
+                        _isDataReloadRequired = true;
+                        _isTreeViewInitialized = false;
+
                         Repaint();
                         AssetShelfLog.RepaintCallCount++;
                     }
@@ -356,7 +338,7 @@ namespace AssetShelf
 
         private void DrawTreeView(Rect rect)
         {
-            if (!_treeViewAvailable)
+            if (_controller == null || !_controller.IsInitialized || !_isTreeViewInitialized)
             {
                 return;
             }
@@ -382,16 +364,16 @@ namespace AssetShelf
             {
                 EditorUserSettings.SetConfigValue(SelectedGroupIndexUserSettingsKey, _selectedGroupIndex.ToString());
                 _filteredContentsGenerated = true;
-                LoadContentGroupIfNull(_selectedGroupIndex);
                 _filteredContents.Clear();
+                var selectedGroup = _controller.GetContentGroup(_selectedGroupIndex);
                 if (!string.IsNullOrEmpty(_selectedPath))
                 {
-                    var selectedGroup = _contentGroups[_selectedGroupIndex];
+
                     _filteredContents.AddRange(selectedGroup.Contents.Where(c => AssetShelfUtility.HasDirectory(c.Path, _selectedPath)));
                 }
                 else
                 {
-                    _filteredContents.AddRange(_contentGroups[_selectedGroupIndex].Contents);
+                    _filteredContents.AddRange(selectedGroup.Contents);
                 }
             }
         }
@@ -411,6 +393,11 @@ namespace AssetShelf
         private bool _dragStarted;
         private void DrawAssetView(Rect rect)
         {
+            if (_controller == null || !_controller.IsInitialized)
+            {
+                return;
+            }
+
             var contents = _filteredContents;
             var itemSize = _previewItemSize;
             var spacing = new Vector2(5, 5);
