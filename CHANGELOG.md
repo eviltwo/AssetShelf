@@ -4,6 +4,9 @@
 ### Added
 - Added search field.
 
+### Modified
+- Refactor grid view.
+
 ## [0.5.4] - 2025-02-04
 ### Added
 - Open inspector for selected object.
