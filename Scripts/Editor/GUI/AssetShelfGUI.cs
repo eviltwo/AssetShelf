@@ -7,7 +7,6 @@ namespace AssetShelf
     {
         private static GUIContent _loadingIcon;
         private static GUIStyle _loadingIconStyle;
-        private static Texture2D _tex;
         public static void DrawGridItem(Rect rect, AssetShelfContent content, bool isSelected)
         {
             if (_loadingIcon == null)
@@ -23,11 +22,6 @@ namespace AssetShelf
                 };
             }
 
-            if (_tex == null)
-            {
-                _tex = new Texture2D(2, 2);
-            }
-
             var drawContent = false;
             if (content != null)
             {
@@ -38,9 +32,10 @@ namespace AssetShelf
                 }
                 else if (content.Asset != null)
                 {
-                    if (PreviewCache.TryGetTexture(content.Asset.GetInstanceID(), _tex))
+                    var cacheTex = PreviewCache.GetTexture(content.Asset.GetInstanceID());
+                    if (cacheTex != null)
                     {
-                        GUI.DrawTexture(rect, _tex);
+                        GUI.DrawTexture(rect, cacheTex);
                         drawContent = true;
                     }
                 }
@@ -56,20 +51,5 @@ namespace AssetShelf
                 HighlightBox(rect);
             }
         }
-
-        /*
-        public static int GetIndexInGridView(float itemSize, Vector2 spacing, Rect rect, Vector2 position)
-        {
-            if (!rect.Contains(position))
-            {
-                return -1;
-            }
-
-            var columnCount = GetGridColumnCount(itemSize, spacing.x, rect.width);
-            var column = Mathf.FloorToInt((position.x - rect.x) / (itemSize + spacing.x));
-            var row = Mathf.FloorToInt((position.y - rect.y) / (itemSize + spacing.y));
-            return column + row * columnCount;
-        }
-        */
     }
 }

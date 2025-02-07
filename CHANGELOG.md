@@ -1,11 +1,12 @@
 # Changelog
 
-## [0.6.0] - Development
+## [0.7.0] - Development
 ### Added
 - Added search field.
 
 ### Modified
 - Refactor grid view.
+- Fix preview cache to using temporary render texture.
 
 ## [0.5.4] - 2025-02-04
 ### Added

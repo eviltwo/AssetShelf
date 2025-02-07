@@ -7,11 +7,13 @@ namespace AssetShelf
     {
         private static bool _initialized;
 
-        private static int[] _ids;
+        private static int[] _assetIds;
 
         private static float[] _times;
 
-        private static RenderTexture[] _rTexs;
+        private static int[] _srcTexIds;
+
+        private static Texture2D[] _textures;
 
         private static Dictionary<int, int> _idPosMap = new Dictionary<int, int>();
 
@@ -24,13 +26,13 @@ namespace AssetShelf
         public static void ReleaseResources()
         {
             _initialized = false;
-            if (_rTexs != null)
+            if (_textures != null)
             {
-                foreach (var rTex in _rTexs)
+                foreach (var tex in _textures)
                 {
-                    rTex?.Release();
+                    Object.DestroyImmediate(tex);
                 }
-                _rTexs = null;
+                _textures = null;
             }
         }
 
@@ -38,19 +40,24 @@ namespace AssetShelf
         {
             _initialized = true;
 
-            if (_rTexs == null)
+            if (_textures == null)
             {
-                _rTexs = new RenderTexture[_cacheSize];
+                _textures = new Texture2D[_cacheSize];
             }
 
-            if (_ids == null)
+            if (_assetIds == null)
             {
-                _ids = new int[_cacheSize];
+                _assetIds = new int[_cacheSize];
             }
 
             if (_times == null)
             {
                 _times = new float[_cacheSize];
+            }
+
+            if (_srcTexIds == null)
+            {
+                _srcTexIds = new int[_cacheSize];
             }
         }
 
@@ -61,24 +68,50 @@ namespace AssetShelf
                 Initialize();
             }
 
+            if (previewTex == null)
+            {
+                return;
+            }
+
             if (!_idPosMap.TryGetValue(instanceID, out var pos))
             {
                 pos = GetOldestPosition();
-                _idPosMap.Remove(_ids[pos]);
+                _idPosMap.Remove(_assetIds[pos]);
                 _idPosMap[instanceID] = pos;
-                _ids[pos] = instanceID;
+                _assetIds[pos] = instanceID;
             }
 
-            if (_rTexs[pos] == null)
+            if (_textures[pos] != null)
             {
-                _rTexs[pos] = new RenderTexture(_textureSize, _textureSize, 0, RenderTextureFormat.ARGB32);
+                // If the instance ID is the same, the texture is already cached.
+                // If the instance ID is different, the texture is stale.
+                if (_srcTexIds[pos] == previewTex.GetInstanceID())
+                {
+                    return;
+                }
+                else
+                {
+                    Object.DestroyImmediate(_textures[pos]);
+                    _textures[pos] = null;
+                }
             }
 
-            var tempRT = RenderTexture.active;
-            RenderTexture.active = _rTexs[pos];
-            Graphics.Blit(previewTex, _rTexs[pos]);
+            if (_textures[pos] == null)
+            {
+                _textures[pos] = new Texture2D(_textureSize, _textureSize);
+            }
+
+            var tempRT = RenderTexture.GetTemporary(_textureSize, _textureSize);
+            var beforeRT = RenderTexture.active;
             RenderTexture.active = tempRT;
+            Graphics.Blit(previewTex, tempRT);
+            _textures[pos].ReadPixels(new Rect(0, 0, _textureSize, _textureSize), 0, 0);
+            _textures[pos].Apply(false, true);
+            RenderTexture.active = beforeRT;
+            RenderTexture.ReleaseTemporary(tempRT);
+
             _times[pos] = Time.realtimeSinceStartup;
+            _srcTexIds[pos] = previewTex.GetInstanceID();
         }
 
         private static int GetOldestPosition()
@@ -102,30 +135,15 @@ namespace AssetShelf
             return pos;
         }
 
-        public static bool TryGetTexture(int instanceID, Texture2D tex)
+        public static Texture2D GetTexture(int instanceID)
         {
-            if (_idPosMap.TryGetValue(instanceID, out var pos))
+            if (_idPosMap.TryGetValue(instanceID, out var pos) && _textures[pos] != null)
             {
-                if (tex.width != _textureSize || tex.height != _textureSize)
-                {
-                    tex.Reinitialize(_textureSize, _textureSize, TextureFormat.ARGB32, false);
-                }
-
-                var renderTexture = RenderTexture.GetTemporary(_textureSize, _textureSize, 0, RenderTextureFormat.ARGB32);
-
-                Graphics.Blit(_rTexs[pos], renderTexture);
-
-                RenderTexture.active = renderTexture;
-                tex.ReadPixels(new Rect(0, 0, _textureSize, _textureSize), 0, 0);
-                tex.Apply();
-                RenderTexture.active = null;
-
-                RenderTexture.ReleaseTemporary(renderTexture);
-
                 _times[pos] = Time.realtimeSinceStartup;
-                return true;
+                return _textures[pos];
             }
-            return false;
+
+            return null;
         }
 
         public static void SetCacheSize(int capacity)
@@ -143,22 +161,25 @@ namespace AssetShelf
 
             var nextIds = new int[nextSize];
             var nextTimes = new float[nextSize];
-            var nextRTexs = new RenderTexture[nextSize];
+            var nextTexs = new Texture2D[nextSize];
+            var nextSrcTexIds = new int[nextSize];
             for (int i = 0; i < _cacheSize; i++)
             {
                 if (i >= nextSize)
                 {
-                    _idPosMap.Remove(_ids[i]);
-                    _rTexs[i]?.Release();
+                    _idPosMap.Remove(_assetIds[i]);
+                    Object.DestroyImmediate(_textures[i]);
                     continue;
                 }
-                nextIds[i] = _ids[i];
+                nextIds[i] = _assetIds[i];
                 nextTimes[i] = _times[i];
-                nextRTexs[i] = _rTexs[i];
+                nextTexs[i] = _textures[i];
+                nextSrcTexIds[i] = _srcTexIds[i];
             }
-            _ids = nextIds;
+            _assetIds = nextIds;
             _times = nextTimes;
-            _rTexs = nextRTexs;
+            _textures = nextTexs;
+            _srcTexIds = nextSrcTexIds;
             _cacheSize = nextSize;
         }
 
