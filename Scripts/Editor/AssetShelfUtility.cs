@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 
@@ -24,22 +23,6 @@ namespace AssetShelf
             return true;
         }
 
-        private static int PreviewLoadingCount;
-        private static int PreviewLoadingLimit = 1000;
-        public static void LoadPreviewsIfNeeded(IReadOnlyList<AssetShelfContent> contents, int start, int end)
-        {
-            PreviewLoadingCount = 0;
-            for (int i = start; i < end; i++)
-            {
-                if (i >= contents.Count || PreviewLoadingCount >= PreviewLoadingLimit)
-                {
-                    break;
-                }
-
-                LoadPreviewIfNeeded(contents[i]);
-            }
-        }
-
         public static void LoadPreviewIfNeeded(AssetShelfContent content)
         {
             if (content == null || content.Asset == null)
@@ -49,7 +32,6 @@ namespace AssetShelf
 
             if (AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
             {
-                PreviewLoadingCount++;
                 return;
             }
 
@@ -63,7 +45,6 @@ namespace AssetShelf
 
             if (AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
             {
-                PreviewLoadingCount++;
                 return;
             }
 
