@@ -7,7 +7,7 @@ namespace AssetShelf
     public class AssetShelfContent
     {
         private static int LoadAssetCount;
-        public static int LoadAssetLimit = 100;
+        public static int LoadAssetLimit = 5;
         public static bool IsLimitted => LoadAssetCount >= LoadAssetLimit;
 
         public static void ResetLoadAssetCount()
