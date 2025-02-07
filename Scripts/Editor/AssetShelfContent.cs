@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEditor;
 using UnityEngine;
 
@@ -6,13 +7,21 @@ namespace AssetShelf
 {
     public class AssetShelfContent
     {
-        private static int LoadAssetCount;
-        public static int LoadAssetLimit = 5;
-        public static bool IsLimitted => LoadAssetCount >= LoadAssetLimit;
+        private static Stopwatch Stopwatch = new Stopwatch();
+        public static bool IsLimitted => Stopwatch.IsRunning && Stopwatch.ElapsedMilliseconds > 33; // 30 fps
 
         public static void ResetLoadAssetCount()
         {
-            LoadAssetCount = 0;
+            Stopwatch.Stop();
+            Stopwatch.Reset();
+        }
+
+        private static void StartLoadAssetCount()
+        {
+            if (!Stopwatch.IsRunning)
+            {
+                Stopwatch.Start();
+            }
         }
 
         private Object _asset;
@@ -21,9 +30,9 @@ namespace AssetShelf
         {
             get
             {
-                if (_asset == null && LoadAssetCount < LoadAssetLimit)
+                if (_asset == null && !IsLimitted)
                 {
-                    LoadAssetCount++;
+                    StartLoadAssetCount();
                     _asset = AssetDatabase.LoadAssetAtPath<Object>(Path);
                 }
                 return _asset;
