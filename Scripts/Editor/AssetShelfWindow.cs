@@ -254,7 +254,7 @@ namespace AssetShelf
             }
 
             var headerHeight = EditorGUIUtility.singleLineHeight * 1 + 4;
-            var sidebarWidth = 200;
+            var sidebarWidth = AssetShelfPreference.instance.SidebarWidth;
             var debugViewHeight = EditorGUIUtility.singleLineHeight * 4;
             var footerHeight = EditorGUIUtility.singleLineHeight * 1;
 

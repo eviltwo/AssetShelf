@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEngine;
 
 namespace AssetShelf
 {
@@ -21,6 +22,8 @@ namespace AssetShelf
             using (var check = new EditorGUI.ChangeCheckScope())
             {
                 var preference = AssetShelfPreference.instance;
+
+                preference.SidebarWidth = Mathf.Max(0, EditorGUILayout.FloatField("Sidebar Width", preference.SidebarWidth));
 
                 preference.ShowAssetName = EditorGUILayout.Toggle("Show Asset Name", preference.ShowAssetName);
                 if (preference.ShowAssetName)
