@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.7.0] - Development
+## [0.7.1] - Development
 ### Added
 - Added search field.
+- Added name label.
 
 ### Modified
 - Refactor grid view.
