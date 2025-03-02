@@ -11,8 +11,8 @@ namespace AssetShelf
         {
             new AssetShelfRule
             {
-                Name = "Source 1",
-                Folders = new Object[0],
+                Name = "Group 1",
+                Folders = new DefaultAsset[1],
                 SearchFilter = "t:GameObject"
             }
         };

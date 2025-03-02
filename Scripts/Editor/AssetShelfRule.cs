@@ -1,4 +1,4 @@
-using UnityEngine;
+using UnityEditor;
 
 namespace AssetShelf
 {
@@ -7,8 +7,8 @@ namespace AssetShelf
     {
         public string Name;
 
-        public Object[] Folders;
-
         public string SearchFilter;
+
+        public DefaultAsset[] Folders;
     }
 }
