@@ -31,6 +31,8 @@ namespace AssetShelf
                     }
                 }
 
+                preference.GridSpacing = EditorGUILayout.Vector2Field("Grid Spacing", preference.GridSpacing);
+
                 if (check.changed)
                 {
                     preference.Save();

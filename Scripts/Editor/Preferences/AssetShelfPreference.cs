@@ -1,4 +1,5 @@
 using UnityEditor;
+using UnityEngine;
 
 namespace AssetShelf
 {
@@ -7,6 +8,7 @@ namespace AssetShelf
     {
         public bool ShowAssetName = true;
         public float AssetNameHeight = 18;
+        public Vector2 GridSpacing = new Vector2(5, 5);
 
         public void Save()
         {

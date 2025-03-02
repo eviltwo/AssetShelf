@@ -453,12 +453,12 @@ namespace AssetShelf
             }
 
             var contents = _filteredContents;
-            var spacing = new Vector2(5, 5);
 
             // Draw grid view
             var gridViewRect = new Rect(rect.x, rect.y + headerHeight, rect.width, rect.height - headerHeight);
-            var previewNameSize = AssetShelfPreference.instance.ShowAssetName ? AssetShelfPreference.instance.AssetNameHeight : 0;
-            _gridView.Draw(gridViewRect, contents.Count, new Vector2(_previewItemSize, _previewItemSize + previewNameSize), spacing, OnDrawGridItem);
+            var preference = AssetShelfPreference.instance;
+            var previewNameSize = preference.ShowAssetName ? preference.AssetNameHeight : 0;
+            _gridView.Draw(gridViewRect, contents.Count, new Vector2(_previewItemSize, _previewItemSize + previewNameSize), preference.GridSpacing, OnDrawGridItem);
 
             // Select in Asset Shelf
             if (Event.current.type == EventType.MouseDown)
