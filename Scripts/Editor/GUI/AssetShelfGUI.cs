@@ -27,10 +27,13 @@ namespace AssetShelf
 
             if (_labelLeftStyle == null)
             {
-                _labelLeftStyle = new GUIStyle(EditorStyles.miniLabel);
-                _labelCenterStyle = new GUIStyle(EditorStyles.miniLabel)
+                _labelLeftStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel)
                 {
-                    alignment = TextAnchor.MiddleCenter
+                    alignment = TextAnchor.UpperLeft
+                };
+                _labelCenterStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel)
+                {
+                    alignment = TextAnchor.UpperCenter
                 };
             }
 
@@ -64,11 +67,12 @@ namespace AssetShelf
             }
 
             // Draw label
-            if (content != null)
+            if (content != null && labelRect.height > 0)
             {
                 var name = Path.GetFileNameWithoutExtension(content.Path);
                 var labelContent = new GUIContent(name);
-                var style = _labelCenterStyle.CalcSize(labelContent).x > rect.width ? _labelLeftStyle : _labelCenterStyle;
+                //var style = _labelCenterStyle.CalcSize(labelContent).x > rect.width ? _labelLeftStyle : _labelCenterStyle;
+                var style = _labelCenterStyle;
                 GUI.Label(labelRect, labelContent, style);
             }
 

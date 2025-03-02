@@ -61,8 +61,6 @@ namespace AssetShelf
 
         private float _previewItemSize = 100;
 
-        private float _previewNameSize = 20;
-
         private bool _isLoadingPreviews;
 
         private GridView _gridView;
@@ -459,7 +457,8 @@ namespace AssetShelf
 
             // Draw grid view
             var gridViewRect = new Rect(rect.x, rect.y + headerHeight, rect.width, rect.height - headerHeight);
-            _gridView.Draw(gridViewRect, contents.Count, new Vector2(_previewItemSize, _previewItemSize + _previewNameSize), spacing, OnDrawGridItem);
+            var previewNameSize = AssetShelfPreference.instance.ShowAssetName ? AssetShelfPreference.instance.AssetNameHeight : 0;
+            _gridView.Draw(gridViewRect, contents.Count, new Vector2(_previewItemSize, _previewItemSize + previewNameSize), spacing, OnDrawGridItem);
 
             // Select in Asset Shelf
             if (Event.current.type == EventType.MouseDown)

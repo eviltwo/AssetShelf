@@ -22,7 +22,14 @@ namespace AssetShelf
             {
                 var preference = AssetShelfPreference.instance;
 
-                // TODO: Draw fields
+                preference.ShowAssetName = EditorGUILayout.Toggle("Show Asset Name", preference.ShowAssetName);
+                if (preference.ShowAssetName)
+                {
+                    using (new EditorGUI.IndentLevelScope())
+                    {
+                        preference.AssetNameHeight = EditorGUILayout.FloatField("Asset Name Height", preference.AssetNameHeight);
+                    }
+                }
 
                 if (check.changed)
                 {
