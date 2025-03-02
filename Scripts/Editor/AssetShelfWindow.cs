@@ -61,8 +61,6 @@ namespace AssetShelf
 
         private float _previewItemSize = 100;
 
-        private float _previewNameSize = 20;
-
         private bool _isLoadingPreviews;
 
         private GridView _gridView;
@@ -256,7 +254,7 @@ namespace AssetShelf
             }
 
             var headerHeight = EditorGUIUtility.singleLineHeight * 1 + 4;
-            var sidebarWidth = 200;
+            var sidebarWidth = AssetShelfPreference.instance.SidebarWidth;
             var debugViewHeight = EditorGUIUtility.singleLineHeight * 4;
             var footerHeight = EditorGUIUtility.singleLineHeight * 1;
 
@@ -455,11 +453,12 @@ namespace AssetShelf
             }
 
             var contents = _filteredContents;
-            var spacing = new Vector2(5, 5);
 
             // Draw grid view
             var gridViewRect = new Rect(rect.x, rect.y + headerHeight, rect.width, rect.height - headerHeight);
-            _gridView.Draw(gridViewRect, contents.Count, new Vector2(_previewItemSize, _previewItemSize + _previewNameSize), spacing, OnDrawGridItem);
+            var preference = AssetShelfPreference.instance;
+            var previewNameSize = preference.ShowAssetName ? preference.AssetNameHeight : 0;
+            _gridView.Draw(gridViewRect, contents.Count, new Vector2(_previewItemSize, _previewItemSize + previewNameSize), preference.GridSpacing, OnDrawGridItem);
 
             // Select in Asset Shelf
             if (Event.current.type == EventType.MouseDown)

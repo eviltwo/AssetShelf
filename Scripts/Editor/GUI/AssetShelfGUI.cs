@@ -8,8 +8,7 @@ namespace AssetShelf
     {
         private static GUIContent _loadingIcon;
         private static GUIStyle _loadingIconStyle;
-        private static GUIStyle _labelLeftStyle;
-        private static GUIStyle _labelCenterStyle;
+        private static GUIStyle _labelStyle;
         public static void DrawGridItem(Rect rect, AssetShelfContent content, bool isSelected)
         {
             if (_loadingIcon == null)
@@ -25,12 +24,11 @@ namespace AssetShelf
                 };
             }
 
-            if (_labelLeftStyle == null)
+            if (_labelStyle == null)
             {
-                _labelLeftStyle = new GUIStyle(EditorStyles.miniLabel);
-                _labelCenterStyle = new GUIStyle(EditorStyles.miniLabel)
+                _labelStyle = new GUIStyle(EditorStyles.wordWrappedMiniLabel)
                 {
-                    alignment = TextAnchor.MiddleCenter
+                    alignment = TextAnchor.UpperCenter
                 };
             }
 
@@ -64,11 +62,11 @@ namespace AssetShelf
             }
 
             // Draw label
-            if (content != null)
+            if (content != null && labelRect.height > 0)
             {
                 var name = Path.GetFileNameWithoutExtension(content.Path);
                 var labelContent = new GUIContent(name);
-                var style = _labelCenterStyle.CalcSize(labelContent).x > rect.width ? _labelLeftStyle : _labelCenterStyle;
+                var style = _labelStyle;
                 GUI.Label(labelRect, labelContent, style);
             }
 
