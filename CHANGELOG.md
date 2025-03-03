@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.7.2] - Development
+## [1.0.0] - 2025-03-04
 ### Added
 - Added search field.
 - Added name label.

@@ -1,5 +1,5 @@
 # Asset Shelf
-Asset Shelf is an asset browser for Unity that displays the contents of specified folders in a list. You can drag and drop the displayed assets into scenes or other areas.
+Asset Shelf is an asset browser that displays assets in a specified folder as a grid. Quickly find prefabs and drag them into the scene to streamline level design workflows.
 
 ![shelf](https://github.com/user-attachments/assets/a93c2cf7-c9d8-47ed-ba37-6c995449a364)
 
