@@ -7,7 +7,12 @@ Asset Shelf is an asset browser that displays assets in a specified folder as a 
 
 ![image](https://github.com/user-attachments/assets/41079a24-7607-42ba-b2fe-745dd4c22f09)
 
-# Install with UPM
+# Asset Store
+You can also purchase this asset from the store. If you'd like to support me financially or add it to your "My Assets," please consider making a purchase.
+
+https://assetstore.unity.com/packages/tools/utilities/asset-shelf-312742
+
+# UPM
 ```
 https://github.com/eviltwo/AssetShelf.git
 ```
