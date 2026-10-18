@@ -159,7 +159,7 @@ namespace AssetShelf
             _treeView = null;
             _treeViewState = null;
             _selectionWithoutPing.Dispose();
-            PreviewCache.ReleaseResources();
+            PreviewCache.ReleaseEntryResources();
         }
 
         public void AddItemsToMenu(GenericMenu menu)
@@ -229,7 +229,7 @@ namespace AssetShelf
                 {
                     _isLoadingPreviews = false;
                     Repaint();
-                    AssetShelfLog.RepaintCallCount++;
+                    AssetShelfLog.AddRepaintCount();
                 }
             }
 
@@ -237,7 +237,7 @@ namespace AssetShelf
             if (AssetShelfContent.IsLimitted)
             {
                 Repaint();
-                AssetShelfLog.RepaintCallCount++;
+                AssetShelfLog.AddRepaintCount();
             }
             AssetShelfContent.ResetLoadAssetCount();
 
@@ -310,12 +310,9 @@ namespace AssetShelf
             AssetShelfGUI.VerticalLine(new Vector2(sidebarWidth, headerHeight), position.height - headerHeight, 2, lineColor);
             AssetShelfGUI.HorizontalLine(new Vector2(sidebarWidth, position.height - footerHeight), position.width - sidebarWidth, 1, lineColor);
 
-            // Resize preview chashe size
-            if (AssetShelfLog.LastDrawPreviewCount * 2 > 128)
-            {
-                AssetPreview.SetPreviewTextureCacheSize(AssetShelfLog.LastDrawPreviewCount * 2);
-                PreviewCache.SetCacheSize(AssetShelfLog.LastDrawPreviewCount * 8);
-            }
+            // Resize preview chashe size every frame
+            AssetPreview.SetPreviewTextureCacheSize(Mathf.CeilToInt(AssetShelfLog.MaxDrawPreviewCount * 2));
+            PreviewCache.SetCacheSize(AssetShelfLog.MaxDrawPreviewCount * 100);
         }
 
         private void DrawHeaderLayout()
@@ -328,7 +325,7 @@ namespace AssetShelf
                     {
                         _isDataReloadRequired = true;
                         Repaint();
-                        AssetShelfLog.RepaintCallCount++;
+                        AssetShelfLog.AddRepaintCount();
                     }
                 }
 
@@ -352,7 +349,7 @@ namespace AssetShelf
                         }
 
                         Repaint();
-                        AssetShelfLog.RepaintCallCount++;
+                        AssetShelfLog.AddRepaintCount();
                     }
                 }
 
@@ -370,7 +367,7 @@ namespace AssetShelf
                         _isTreeViewInitialized = false;
 
                         Repaint();
-                        AssetShelfLog.RepaintCallCount++;
+                        AssetShelfLog.AddRepaintCount();
                     }
                 }
             }
@@ -434,10 +431,12 @@ namespace AssetShelf
         {
             if (GUILayout.Button("Clear"))
             {
-                AssetShelfLog.Clear();
+                AssetShelfLog.ClearRepaintCount();
             }
-            GUILayout.Label($"Draw preview: {AssetShelfLog.LastDrawPreviewCount}");
-            GUILayout.Label($"Repaint call count: {AssetShelfLog.RepaintCallCount}");
+            
+            // GUILayout.Label($"Preview: {AssetShelfLog.LastDrawPreviewCount}");
+            GUILayout.Label($"MaxPreview: {AssetShelfLog.MaxDrawPreviewCount}");
+            GUILayout.Label($"Repaint: {AssetShelfLog.RepaintCount}");
         }
 
         private Object _selectedAsset = null;
@@ -468,6 +467,7 @@ namespace AssetShelf
             var gridViewRect = new Rect(rect.x, rect.y + headerHeight, rect.width, rect.height - headerHeight);
             var preference = AssetShelfPreference.instance;
             var previewNameSize = preference.ShowAssetName ? preference.AssetNameHeight : 0;
+            AssetShelfLog.ClearDrawCount();
             _gridView.Draw(gridViewRect, contents.Count, new Vector2(_previewItemSize, _previewItemSize + previewNameSize), preference.GridSpacing, OnDrawGridItem);
 
             // Select in Asset Shelf
@@ -479,7 +479,7 @@ namespace AssetShelf
                     _selectedAsset = contents[selectedIndex].Asset;
                     _grabbedAsset = contents[selectedIndex].Asset;
                     Repaint();
-                    AssetShelfLog.RepaintCallCount++;
+                    AssetShelfLog.AddRepaintCount();
                 }
                 else
                 {
@@ -556,7 +556,7 @@ namespace AssetShelf
         {
             if (Event.current.type == EventType.Repaint)
             {
-                AssetShelfLog.LastDrawPreviewCount++;
+                AssetShelfLog.AddDrawCount();
                 var content = _filteredContents[index];
                 AssetShelfUtility.LoadPreviewIfNeeded(content);
                 _isLoadingPreviews |= content.Preview == null;

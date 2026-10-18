@@ -5,129 +5,99 @@ namespace AssetShelf
 {
     public static class PreviewCache
     {
-        private static bool _initialized;
 
-        private static readonly BiDictionary<Object, int> _objectPosMap = new();
-
-        private static float[] _times;
-
-        private static readonly Dictionary<int, Texture2D> _posToPreviewTex = new();
-
-        private static Texture2D[] _textures;
+        private static readonly Dictionary<Object, CacheEntry> _entries = new();
 
         private static readonly int _textureSize = 16;
 
         private static int _cacheSize = 128;
 
-        public static int CacheSize => _cacheSize;
-
-        public static void ReleaseResources()
+        public static void ReleaseEntryResources()
         {
-            _initialized = false;
-            if (_textures != null)
+            foreach (var entry in _entries.Values)
             {
-                foreach (var tex in _textures)
-                {
-                    Object.DestroyImmediate(tex);
-                }
-                _textures = null;
+                entry.ReleaseResources();
             }
+            
+            _entries.Clear();
         }
 
-        private static void Initialize()
+        public static void PushTexture(Object sourceObject, Texture2D sourceTex)
         {
-            _initialized = true;
-
-            if (_textures == null)
-            {
-                _textures = new Texture2D[_cacheSize];
-            }
-
-            if (_times == null)
-            {
-                _times = new float[_cacheSize];
-            }
-        }
-
-        public static void PushTexture(Object sourceObject, Texture2D previewTex)
-        {
-            if (!_initialized)
-            {
-                Initialize();
-            }
-
-            if (previewTex == null)
+            if (sourceObject == null || sourceTex == null)
             {
                 return;
             }
-
-            var hasEntry = _objectPosMap.TryGetValue(sourceObject, out var pos);
+            
+            var hasEntry = _entries.TryGetValue(sourceObject, out var entry);
             if (!hasEntry)
             {
-                pos = GetOldestPosition();
-                _objectPosMap.RemoveEntry(pos);
-                _objectPosMap.AddEntry(sourceObject, pos);
-            }
-
-            if (_textures[pos] != null)
-            {
-                if (_posToPreviewTex.TryGetValue(pos, out var tex) && tex == previewTex)
+                if (_entries.Count >= _cacheSize)
                 {
-                    // the texture is already cached.
-                    return;
+                    RemoveOldEntry();
                 }
-                else
-                {
-                    Object.DestroyImmediate(_textures[pos]);
-                    _textures[pos] = null;
-                }
+
+                entry = new CacheEntry();
+                _entries.Add(sourceObject, entry);
             }
 
-            if (_textures[pos] == null)
+            if (entry.SourceTextureReference != null && entry.SourceTextureReference == sourceTex)
             {
-                _textures[pos] = new Texture2D(_textureSize, _textureSize);
+                // the texture is already cached.
+                return;
             }
 
+            entry.ReleaseResources();
+            entry.GeneratedTexture = new Texture2D(_textureSize, _textureSize);
             var tempRT = RenderTexture.GetTemporary(_textureSize, _textureSize);
             var beforeRT = RenderTexture.active;
             RenderTexture.active = tempRT;
-            Graphics.Blit(previewTex, tempRT);
-            _textures[pos].ReadPixels(new Rect(0, 0, _textureSize, _textureSize), 0, 0);
-            _textures[pos].Apply(false, true);
+            Graphics.Blit(sourceTex, tempRT);
+            entry.GeneratedTexture.ReadPixels(new Rect(0, 0, _textureSize, _textureSize), 0, 0);
+            entry.GeneratedTexture.Apply(false, true);
             RenderTexture.active = beforeRT;
             RenderTexture.ReleaseTemporary(tempRT);
 
-            _times[pos] = Time.realtimeSinceStartup;
-            _posToPreviewTex[pos] = previewTex;
+            entry.LastAccessTimestamp = Time.realtimeSinceStartup;
+            entry.SourceTextureReference = sourceTex;
         }
 
-        private static int GetOldestPosition()
+        private static void RemoveOldEntry()
         {
-            var minValue = float.MaxValue;
-            var pos = 0;
-            for (int i = 0; i < _times.Length; i++)
+            var oldTimestamp = float.MaxValue;
+            Object oldKey = null;
+            CacheEntry oldEntry = null;
+            foreach (var keyValue in _entries)
             {
-                if (_times[i] == 0)
+                if (keyValue.Key == null)
                 {
-                    return i;
+                    keyValue.Value?.ReleaseResources();
+                    _entries.Remove(keyValue.Key);
+                    return;
                 }
 
-                if (_times[i] < minValue)
+                if (keyValue.Value.LastAccessTimestamp < oldTimestamp)
                 {
-                    minValue = _times[i];
-                    pos = i;
+                    oldTimestamp = keyValue.Value.LastAccessTimestamp;
+                    oldKey = keyValue.Key;
+                    oldEntry = keyValue.Value;
                 }
             }
 
-            return pos;
+            if (oldKey != null)
+            {
+                oldEntry?.ReleaseResources();
+                _entries.Remove(oldKey);
+            }
         }
 
         public static Texture2D GetTexture(Object sourceObject)
         {
-            if (_objectPosMap.TryGetValue(sourceObject, out var pos) && _textures[pos] != null)
+            if (_entries.TryGetValue(sourceObject, out var entry)
+                && entry.GeneratedTexture != null)
             {
-                _times[pos] = Time.realtimeSinceStartup;
-                return _textures[pos];
+                entry.LastAccessTimestamp = Time.realtimeSinceStartup;
+                return entry.GeneratedTexture;
             }
 
             return null;
@@ -135,33 +105,12 @@ namespace AssetShelf
 
         public static void SetCacheSize(int capacity)
         {
-            if (!_initialized)
+            _cacheSize = GetSquaredSize(capacity);
+            var removeCount = _entries.Count - _cacheSize;
+            for (int i = 0; i < removeCount; i++)
             {
-                Initialize();
+                RemoveOldEntry();
             }
-
-            var nextSize = GetSquaredSize(capacity);
-            if (_cacheSize == nextSize)
-            {
-                return;
-            }
-
-            var nextTimes = new float[nextSize];
-            var nextTexs = new Texture2D[nextSize];
-            for (int i = 0; i < _cacheSize; i++)
-            {
-                if (i >= nextSize)
-                {
-                    _objectPosMap.RemoveEntry(i);
-                    Object.DestroyImmediate(_textures[i]);
-                    continue;
-                }
-                nextTimes[i] = _times[i];
-                nextTexs[i] = _textures[i];
-            }
-            _times = nextTimes;
-            _textures = nextTexs;
-            _cacheSize = nextSize;
         }
 
         private static int GetSquaredSize(int capacity)
@@ -177,35 +126,17 @@ namespace AssetShelf
 
             return maxSquare * maxSquare;
         }
-        
-        private class BiDictionary<TKey, TValue>
+
+        private class CacheEntry
         {
-            private readonly Dictionary<TKey, TValue> _keyToValue = new();
-            private readonly Dictionary<TValue, TKey> _valueToKey = new();
+            public float LastAccessTimestamp;
+            public Texture2D SourceTextureReference;
+            public Texture2D GeneratedTexture;
 
-            public bool TryGetValue(TKey key, out TValue value)
+            public void ReleaseResources()
             {
-                return _keyToValue.TryGetValue(key, out value);
-            }
-
-            public bool TryGetKey(TValue value, out TKey key)
-            {
-                return _valueToKey.TryGetValue(value, out key);
-            }
-
-            public void AddEntry(TKey key, TValue value)
-            {
-                _keyToValue.Add(key, value);
-                _valueToKey.Add(value, key);
-            }
-
-            public void RemoveEntry(TValue value)
-            {
-                if (_valueToKey.TryGetValue(value, out var key))
-                {
-                    _keyToValue.Remove(key);
-                    _valueToKey.Remove(value);
-                }
+                Object.DestroyImmediate(GeneratedTexture);
+                GeneratedTexture = null;
             }
         }
     }
