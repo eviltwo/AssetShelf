@@ -5,142 +5,99 @@ namespace AssetShelf
 {
     public static class PreviewCache
     {
-        private static bool _initialized;
 
-        private static int[] _assetIds;
+        private static readonly Dictionary<Object, CacheEntry> _entries = new();
 
-        private static float[] _times;
-
-        private static int[] _srcTexIds;
-
-        private static Texture2D[] _textures;
-
-        private static Dictionary<int, int> _idPosMap = new Dictionary<int, int>();
-
-        private static int _textureSize = 16;
+        private static readonly int _textureSize = 16;
 
         private static int _cacheSize = 128;
 
-        public static int CacheSize => _cacheSize;
-
-        public static void ReleaseResources()
+        public static void ReleaseEntryResources()
         {
-            _initialized = false;
-            if (_textures != null)
+            foreach (var entry in _entries.Values)
             {
-                foreach (var tex in _textures)
-                {
-                    Object.DestroyImmediate(tex);
-                }
-                _textures = null;
+                entry.ReleaseResources();
             }
+            
+            _entries.Clear();
         }
 
-        private static void Initialize()
+        public static void PushTexture(Object sourceObject, Texture2D sourceTex)
         {
-            _initialized = true;
-
-            if (_textures == null)
-            {
-                _textures = new Texture2D[_cacheSize];
-            }
-
-            if (_assetIds == null)
-            {
-                _assetIds = new int[_cacheSize];
-            }
-
-            if (_times == null)
-            {
-                _times = new float[_cacheSize];
-            }
-
-            if (_srcTexIds == null)
-            {
-                _srcTexIds = new int[_cacheSize];
-            }
-        }
-
-        public static void PushTexture(int instanceID, Texture2D previewTex)
-        {
-            if (!_initialized)
-            {
-                Initialize();
-            }
-
-            if (previewTex == null)
+            if (sourceObject == null || sourceTex == null)
             {
                 return;
             }
-
-            if (!_idPosMap.TryGetValue(instanceID, out var pos))
+            
+            var hasEntry = _entries.TryGetValue(sourceObject, out var entry);
+            if (!hasEntry)
             {
-                pos = GetOldestPosition();
-                _idPosMap.Remove(_assetIds[pos]);
-                _idPosMap[instanceID] = pos;
-                _assetIds[pos] = instanceID;
-            }
-
-            if (_textures[pos] != null)
-            {
-                // If the instance ID is the same, the texture is already cached.
-                // If the instance ID is different, the texture is stale.
-                if (_srcTexIds[pos] == previewTex.GetInstanceID())
+                if (_entries.Count >= _cacheSize)
                 {
-                    return;
+                    RemoveOldEntry();
                 }
-                else
-                {
-                    Object.DestroyImmediate(_textures[pos]);
-                    _textures[pos] = null;
-                }
+
+                entry = new CacheEntry();
+                _entries.Add(sourceObject, entry);
             }
 
-            if (_textures[pos] == null)
+            if (entry.SourceTextureReference != null && entry.SourceTextureReference == sourceTex)
             {
-                _textures[pos] = new Texture2D(_textureSize, _textureSize);
+                // the texture is already cached.
+                return;
             }
 
+            entry.ReleaseResources();
+            entry.GeneratedTexture = new Texture2D(_textureSize, _textureSize);
             var tempRT = RenderTexture.GetTemporary(_textureSize, _textureSize);
             var beforeRT = RenderTexture.active;
             RenderTexture.active = tempRT;
-            Graphics.Blit(previewTex, tempRT);
-            _textures[pos].ReadPixels(new Rect(0, 0, _textureSize, _textureSize), 0, 0);
-            _textures[pos].Apply(false, true);
+            Graphics.Blit(sourceTex, tempRT);
+            entry.GeneratedTexture.ReadPixels(new Rect(0, 0, _textureSize, _textureSize), 0, 0);
+            entry.GeneratedTexture.Apply(false, true);
             RenderTexture.active = beforeRT;
             RenderTexture.ReleaseTemporary(tempRT);
 
-            _times[pos] = Time.realtimeSinceStartup;
-            _srcTexIds[pos] = previewTex.GetInstanceID();
+            entry.LastAccessTimestamp = Time.realtimeSinceStartup;
+            entry.SourceTextureReference = sourceTex;
         }
 
-        private static int GetOldestPosition()
+        private static void RemoveOldEntry()
         {
-            var minValue = float.MaxValue;
-            var pos = 0;
-            for (int i = 0; i < _times.Length; i++)
+            var oldTimestamp = float.MaxValue;
+            Object oldKey = null;
+            CacheEntry oldEntry = null;
+            foreach (var keyValue in _entries)
             {
-                if (_times[i] == 0)
+                if (keyValue.Key == null)
                 {
-                    return i;
+                    keyValue.Value?.ReleaseResources();
+                    _entries.Remove(keyValue.Key);
+                    return;
                 }
 
-                if (_times[i] < minValue)
+                if (keyValue.Value.LastAccessTimestamp < oldTimestamp)
                 {
-                    minValue = _times[i];
-                    pos = i;
+                    oldTimestamp = keyValue.Value.LastAccessTimestamp;
+                    oldKey = keyValue.Key;
+                    oldEntry = keyValue.Value;
                 }
             }
 
-            return pos;
+            if (oldKey != null)
+            {
+                oldEntry?.ReleaseResources();
+                _entries.Remove(oldKey);
+            }
         }
 
-        public static Texture2D GetTexture(int instanceID)
+        public static Texture2D GetTexture(Object sourceObject)
         {
-            if (_idPosMap.TryGetValue(instanceID, out var pos) && _textures[pos] != null)
+            if (_entries.TryGetValue(sourceObject, out var entry)
+                && entry.GeneratedTexture != null)
             {
-                _times[pos] = Time.realtimeSinceStartup;
-                return _textures[pos];
+                entry.LastAccessTimestamp = Time.realtimeSinceStartup;
+                return entry.GeneratedTexture;
             }
 
             return null;
@@ -148,39 +105,12 @@ namespace AssetShelf
 
         public static void SetCacheSize(int capacity)
         {
-            if (!_initialized)
+            _cacheSize = GetSquaredSize(capacity);
+            var removeCount = _entries.Count - _cacheSize;
+            for (int i = 0; i < removeCount; i++)
             {
-                Initialize();
+                RemoveOldEntry();
             }
-
-            var nextSize = GetSquaredSize(capacity);
-            if (_cacheSize == nextSize)
-            {
-                return;
-            }
-
-            var nextIds = new int[nextSize];
-            var nextTimes = new float[nextSize];
-            var nextTexs = new Texture2D[nextSize];
-            var nextSrcTexIds = new int[nextSize];
-            for (int i = 0; i < _cacheSize; i++)
-            {
-                if (i >= nextSize)
-                {
-                    _idPosMap.Remove(_assetIds[i]);
-                    Object.DestroyImmediate(_textures[i]);
-                    continue;
-                }
-                nextIds[i] = _assetIds[i];
-                nextTimes[i] = _times[i];
-                nextTexs[i] = _textures[i];
-                nextSrcTexIds[i] = _srcTexIds[i];
-            }
-            _assetIds = nextIds;
-            _times = nextTimes;
-            _textures = nextTexs;
-            _srcTexIds = nextSrcTexIds;
-            _cacheSize = nextSize;
         }
 
         private static int GetSquaredSize(int capacity)
@@ -195,6 +125,19 @@ namespace AssetShelf
             }
 
             return maxSquare * maxSquare;
+        }
+
+        private class CacheEntry
+        {
+            public float LastAccessTimestamp;
+            public Texture2D SourceTextureReference;
+            public Texture2D GeneratedTexture;
+
+            public void ReleaseResources()
+            {
+                Object.DestroyImmediate(GeneratedTexture);
+                GeneratedTexture = null;
+            }
         }
     }
 }
