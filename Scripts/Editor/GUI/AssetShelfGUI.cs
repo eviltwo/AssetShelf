@@ -47,7 +47,7 @@ namespace AssetShelf
                 }
                 else if (content.Asset != null)
                 {
-                    var cacheTex = PreviewCache.GetTexture(content.Asset.GetInstanceID());
+                    var cacheTex = PreviewCache.GetTexture(content.Asset);
                     if (cacheTex != null)
                     {
                         GUI.DrawTexture(imgRect, cacheTex);

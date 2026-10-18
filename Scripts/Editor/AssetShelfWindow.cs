@@ -5,6 +5,10 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
+#if UNITY_6000_3_OR_NEWER
+using TreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
+#endif
+
 namespace AssetShelf
 {
     public class AssetShelfWindow : EditorWindow, IHasCustomMenu
@@ -38,7 +42,7 @@ namespace AssetShelf
         private AssetShelfContainerController _controller;
 
         private AssetShelfTreeView _treeView;
-
+        
         private TreeViewState _treeViewState;
 
         private bool _isTreeViewInitialized;
@@ -185,7 +189,13 @@ namespace AssetShelf
                 if (stream.GetEventType(i) == ObjectChangeKind.ChangeAssetObjectProperties)
                 {
                     stream.GetChangeAssetObjectPropertiesEvent(i, out data);
-                    if (data.instanceId == _controller.ContainerInstanceID)
+                    bool correct;
+#if UNITY_6000_3_OR_NEWER
+                    correct = data.entityId == _controller.Container?.GetEntityId();
+#else
+                    correct = data.instanceId == _controller.Container?.GetInstanceID();
+#endif
+                    if (correct)
                     {
                         _isDataReloadRequired = true;
                         break;
@@ -209,7 +219,7 @@ namespace AssetShelf
                     }
 
                     var content = _filteredContents[i];
-                    if (content != null && content.Asset != null && AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+                    if (content != null && content.Asset != null && AssetPreviewCompat.IsLoadingAssetPreview(content.Asset))
                     {
                         hasLoading = true;
                         break;

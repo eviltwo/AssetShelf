@@ -7,17 +7,15 @@ namespace AssetShelf
     {
         private static bool _initialized;
 
-        private static int[] _assetIds;
+        private static readonly BiDictionary<Object, int> _objectPosMap = new();
 
         private static float[] _times;
 
-        private static int[] _srcTexIds;
+        private static readonly Dictionary<int, Texture2D> _posToPreviewTex = new();
 
         private static Texture2D[] _textures;
 
-        private static Dictionary<int, int> _idPosMap = new Dictionary<int, int>();
-
-        private static int _textureSize = 16;
+        private static readonly int _textureSize = 16;
 
         private static int _cacheSize = 128;
 
@@ -45,23 +43,13 @@ namespace AssetShelf
                 _textures = new Texture2D[_cacheSize];
             }
 
-            if (_assetIds == null)
-            {
-                _assetIds = new int[_cacheSize];
-            }
-
             if (_times == null)
             {
                 _times = new float[_cacheSize];
             }
-
-            if (_srcTexIds == null)
-            {
-                _srcTexIds = new int[_cacheSize];
-            }
         }
 
-        public static void PushTexture(int instanceID, Texture2D previewTex)
+        public static void PushTexture(Object sourceObject, Texture2D previewTex)
         {
             if (!_initialized)
             {
@@ -73,20 +61,19 @@ namespace AssetShelf
                 return;
             }
 
-            if (!_idPosMap.TryGetValue(instanceID, out var pos))
+            var hasEntry = _objectPosMap.TryGetValue(sourceObject, out var pos);
+            if (!hasEntry)
             {
                 pos = GetOldestPosition();
-                _idPosMap.Remove(_assetIds[pos]);
-                _idPosMap[instanceID] = pos;
-                _assetIds[pos] = instanceID;
+                _objectPosMap.RemoveEntry(pos);
+                _objectPosMap.AddEntry(sourceObject, pos);
             }
 
             if (_textures[pos] != null)
             {
-                // If the instance ID is the same, the texture is already cached.
-                // If the instance ID is different, the texture is stale.
-                if (_srcTexIds[pos] == previewTex.GetInstanceID())
+                if (_posToPreviewTex.TryGetValue(pos, out var tex) && tex == previewTex)
                 {
+                    // the texture is already cached.
                     return;
                 }
                 else
@@ -111,7 +98,7 @@ namespace AssetShelf
             RenderTexture.ReleaseTemporary(tempRT);
 
             _times[pos] = Time.realtimeSinceStartup;
-            _srcTexIds[pos] = previewTex.GetInstanceID();
+            _posToPreviewTex[pos] = previewTex;
         }
 
         private static int GetOldestPosition()
@@ -135,9 +122,9 @@ namespace AssetShelf
             return pos;
         }
 
-        public static Texture2D GetTexture(int instanceID)
+        public static Texture2D GetTexture(Object sourceObject)
         {
-            if (_idPosMap.TryGetValue(instanceID, out var pos) && _textures[pos] != null)
+            if (_objectPosMap.TryGetValue(sourceObject, out var pos) && _textures[pos] != null)
             {
                 _times[pos] = Time.realtimeSinceStartup;
                 return _textures[pos];
@@ -159,27 +146,21 @@ namespace AssetShelf
                 return;
             }
 
-            var nextIds = new int[nextSize];
             var nextTimes = new float[nextSize];
             var nextTexs = new Texture2D[nextSize];
-            var nextSrcTexIds = new int[nextSize];
             for (int i = 0; i < _cacheSize; i++)
             {
                 if (i >= nextSize)
                 {
-                    _idPosMap.Remove(_assetIds[i]);
+                    _objectPosMap.RemoveEntry(i);
                     Object.DestroyImmediate(_textures[i]);
                     continue;
                 }
-                nextIds[i] = _assetIds[i];
                 nextTimes[i] = _times[i];
                 nextTexs[i] = _textures[i];
-                nextSrcTexIds[i] = _srcTexIds[i];
             }
-            _assetIds = nextIds;
             _times = nextTimes;
             _textures = nextTexs;
-            _srcTexIds = nextSrcTexIds;
             _cacheSize = nextSize;
         }
 
@@ -195,6 +176,37 @@ namespace AssetShelf
             }
 
             return maxSquare * maxSquare;
+        }
+        
+        private class BiDictionary<TKey, TValue>
+        {
+            private readonly Dictionary<TKey, TValue> _keyToValue = new();
+            private readonly Dictionary<TValue, TKey> _valueToKey = new();
+
+            public bool TryGetValue(TKey key, out TValue value)
+            {
+                return _keyToValue.TryGetValue(key, out value);
+            }
+
+            public bool TryGetKey(TValue value, out TKey key)
+            {
+                return _valueToKey.TryGetValue(value, out key);
+            }
+
+            public void AddEntry(TKey key, TValue value)
+            {
+                _keyToValue.Add(key, value);
+                _valueToKey.Add(value, key);
+            }
+
+            public void RemoveEntry(TValue value)
+            {
+                if (_valueToKey.TryGetValue(value, out var key))
+                {
+                    _keyToValue.Remove(key);
+                    _valueToKey.Remove(value);
+                }
+            }
         }
     }
 }
