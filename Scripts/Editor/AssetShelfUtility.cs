@@ -30,7 +30,7 @@ namespace AssetShelf
                 return;
             }
 
-            if (AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            if (AssetPreviewCompat.IsLoadingAssetPreview(content.Asset))
             {
                 return;
             }
@@ -39,23 +39,23 @@ namespace AssetShelf
             content.Preview = AssetPreview.GetAssetPreview(content.Asset);
             if (content.Preview != null)
             {
-                PreviewCache.PushTexture(content.Asset.GetInstanceID(), content.Preview);
+                PreviewCache.PushTexture(content.Asset, content.Preview);
                 return;
             }
 
-            if (AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            if (AssetPreviewCompat.IsLoadingAssetPreview(content.Asset))
             {
                 return;
             }
 
             content.Preview = AssetPreview.GetMiniThumbnail(content.Asset);
-            if (content.Preview != null || AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            if (content.Preview != null || AssetPreviewCompat.IsLoadingAssetPreview(content.Asset))
             {
                 return;
             }
 
             content.Preview = AssetPreview.GetMiniTypeThumbnail(content.Asset.GetType());
-            if (content.Preview != null || AssetPreview.IsLoadingAssetPreview(content.Asset.GetInstanceID()))
+            if (content.Preview != null || AssetPreviewCompat.IsLoadingAssetPreview(content.Asset))
             {
                 return;
             }

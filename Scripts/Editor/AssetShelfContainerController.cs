@@ -8,8 +8,6 @@ namespace AssetShelf
 
         public AssetShelfContainer Container => _container;
 
-        public int ContainerInstanceID => _container?.GetInstanceID() ?? 0;
-
         private int _contentGroupCount;
 
         private string[] _contentGroupNames = new string[0];
