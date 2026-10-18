@@ -1,6 +1,11 @@
 # Changelog
 
-## [1.0.0] - 2025-03-04
+## [1.1.0]
+### Fixed
+- Fix errors related to TreeView and EntityId.
+- Fix an issue with excessive cache size.
+
+## [1.0.0]
 ### Added
 - Added search field.
 - Added name label.
@@ -10,7 +15,7 @@
 - Refactor grid view.
 - Fix preview cache to using temporary render texture.
 
-## [0.5.4] - 2025-02-04
+## [0.5.4]
 ### Added
 - Open inspector for selected object.
 - Added a create button.
@@ -20,4 +25,4 @@
 - Modified the process for detecting changes in the Settings asset.
 - Refactor data controls.
 
-## [0.5.0] - 2025-01-29
+## [0.5.0]

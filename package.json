@@ -1,7 +1,7 @@
 {
     "name": "com.eviltwo.asset-shelf",
     "displayName": "Asset Shelf",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "unity": "2022.3",
     "description": "Asset Shelf is an asset browser that displays assets in a specified folder as a grid. Quickly find prefabs and drag them into the scene to streamline level design workflows.",
     "author": {
